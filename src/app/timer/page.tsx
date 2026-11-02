@@ -15,9 +15,7 @@ export default function TimerPage() {
 
   return (
     <div className="page-shell py-10">
-      <p className="page-eyebrow">Make time for the work</p>
-      <h1 className="page-title">Timer</h1>
-      <p className="mb-8 mt-3 text-sm text-white/60">Track your workout duration.</p>
+      <h1 className="page-title mb-6">Timer</h1>
           <div className="flex flex-col justify-between rounded-xl border border-white/10 bg-ink-850 p-5 transition sm:p-8">
             <div>
               <div className="mb-4 flex items-center justify-between">

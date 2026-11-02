@@ -34,8 +34,8 @@ export default function RootLayout({
             <main>{children}</main>
             <FloatingTimer />
             <footer className="page-shell mt-16 flex flex-col gap-3 border-t border-white/10 py-7 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
-              <span className="font-semibold tracking-tight text-white/60">RepVisual <span className="ml-2 font-normal text-white/50">Built for the work.</span></span>
-              <span>Exercise data: free-exercise-db. Your training stays on this device.</span>
+              <span className="font-semibold tracking-tight text-white/60">RepVisual</span>
+              <span>Exercise data: free-exercise-db (MIT).</span>
             </footer>
             </SpotifyProvider>
           </TimerProvider>

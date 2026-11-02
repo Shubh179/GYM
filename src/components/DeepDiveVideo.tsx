@@ -14,7 +14,6 @@ export default function DeepDiveVideo({
     <section aria-label="Exercise video demonstration" className="overflow-hidden rounded-xl border border-white/10 bg-ink-900">
       <div className="border-b border-white/10 px-4 py-4 sm:px-5">
         <h2 className="font-display text-base font-semibold text-white">Video demonstration</h2>
-        <p className="mt-1 text-sm text-white/60">Watch {name} directly in the player below.</p>
       </div>
       <div className="aspect-video w-full bg-black">
         <iframe

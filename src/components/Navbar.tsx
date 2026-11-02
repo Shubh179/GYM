@@ -23,7 +23,6 @@ export default function Navbar() {
           </span>
           <span className="text-lg font-bold tracking-tight text-white">RepVisual<span className="ml-1 text-accent">.</span></span>
         </Link>
-        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/50 lg:hidden">Your training space</span>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 pb-2 lg:flex lg:gap-1 lg:pb-0">
         {links.map(link => {

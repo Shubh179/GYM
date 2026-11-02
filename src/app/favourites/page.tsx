@@ -8,14 +8,12 @@ export default function FavouritesPage() {
   const { hydrated, favourites } = useLibrary();
   return (
     <div className="page-shell py-10">
-      <p className="page-eyebrow">Your collection</p>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="page-title">Favourites</h1>
         {hydrated && <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/60">
           {favourites.length} {favourites.length === 1 ? "exercise" : "exercises"}
         </span>}
       </div>
-      <p className="mb-6 text-white/50">Your saved exercises. Tap a heart to remove an exercise from favourites.</p>
       {!hydrated ? (
         <p role="status" className="py-10 text-center text-white/50">Loading your favourites...</p>
       ) : favourites.length === 0 ? (

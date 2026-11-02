@@ -33,10 +33,10 @@ function Results() {
 
   return (
     <div className="page-shell py-10">
-      <div className="mb-8 border-b border-white/10 pb-7">
-        <p className="page-eyebrow">Exercise library</p>
-        <h1 className="page-title">Find your next movement.</h1>
-        <p className="mt-3 text-sm text-white/60">Demonstrations, technique, and your own exercises. All in one place.</p>
+      <div className="mb-5 border-b border-white/10 pb-5">
+
+        <h1 className="page-title">Exercises</h1>
+
       </div>
       <div className="mb-8 max-w-2xl">
         <SearchBar size="md" initialQuery={q} />

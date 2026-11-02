@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import ExerciseCard from "@/components/ExerciseCard";
+import WeeklySchedule from "@/components/WeeklySchedule";
 import WorkoutHeatmap from "@/components/WorkoutHeatmap";
 import InlineExercisePicker from "@/components/InlineExercisePicker";
 import QuickNotes from "@/components/QuickNotes";
@@ -41,7 +42,7 @@ function WorkoutBlock({
   const [activeNotesExercise, setActiveNotesExercise] =
     useState<SavedExercise | null>(null);
 
-  const [localCollapsed, setLocalCollapsed] = useState(false);
+  const [localCollapsed, setLocalCollapsed] = useState(true);
   const collapsed = isCollapsed !== undefined ? isCollapsed : localCollapsed;
   const toggleCollapse =
     onToggleCollapse ?? (() => setLocalCollapsed((v) => !v));
@@ -127,7 +128,7 @@ function WorkoutBlock({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className={`${collapsed ? "hidden" : "flex"} flex-wrap items-center gap-2 text-sm`}>
           {/* Direct Add Exercise Toggle Button */}
           <button
             onClick={() => setShowAddExercise((v) => !v)}
@@ -457,24 +458,18 @@ export default function LibraryPage() {
   const [collapsedWorkouts, setCollapsedWorkouts] = useState<Record<string, boolean>>({});
 
   const allCollapsed =
-    workouts.length > 0 && workouts.every((w) => collapsedWorkouts[w.id]);
+    workouts.length > 0 && workouts.every((w) => collapsedWorkouts[w.id] ?? true);
 
   function toggleAllWorkouts() {
-    if (allCollapsed) {
-      setCollapsedWorkouts({});
-    } else {
-      const all: Record<string, boolean> = {};
-      workouts.forEach((w) => {
-        all[w.id] = true;
-      });
-      setCollapsedWorkouts(all);
-    }
+    const next: Record<string, boolean> = {};
+    workouts.forEach((workout) => { next[workout.id] = !allCollapsed; });
+    setCollapsedWorkouts(next);
   }
 
   function toggleWorkoutCollapse(id: string) {
     setCollapsedWorkouts((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [id]: !(prev[id] ?? true),
     }));
   }
 
@@ -492,33 +487,31 @@ export default function LibraryPage() {
 
   return (
     <div className="page-shell py-8 sm:py-10">
-      <div className="mb-8 flex flex-col justify-between gap-6 border-b border-white/10 pb-8 sm:flex-row sm:items-end">
+      <div className="mb-5 flex items-center justify-between gap-4 border-b border-white/10 pb-5 sm:flex-row sm:items-end">
         <div>
-          <p className="page-eyebrow">Training journal</p>
           <h1 className="page-title">My Training</h1>
-          <p className="mt-3 max-w-md text-sm text-white/60">A place for every rep. Plan your sessions, track your work, and keep showing up.</p>
         </div>
-        <Link href="/search" className="inline-flex min-h-11 items-center justify-center gap-3 self-start rounded-lg border border-white/15 bg-ink-850 px-5 py-3 text-sm font-semibold text-white transition hover:border-accent/50 sm:self-auto">
+        <Link href="/search" className="hidden min-h-11 items-center justify-center gap-3 self-start sm:inline-flex rounded-lg border border-white/15 bg-ink-850 px-5 py-3 text-sm font-semibold text-white transition hover:border-accent/50 sm:self-auto">
           Browse exercises <span aria-hidden="true" className="text-accent">&#8599;</span>
         </Link>
       </div>
 
       {/* Compact daily activity heatmap */}
-      <section className="mt-10">
+      <section className="mt-6 sm:mt-8">
         <WorkoutHeatmap />
       </section>
 
+      <div className="mt-6 sm:mt-8">
+        <WeeklySchedule />
+      </div>
+
       {/* Workout sessions */}
-      <section className="mt-10">
+      <section className="mt-6 sm:mt-8">
         <div className="mb-6 flex flex-col justify-between gap-5 xl:flex-row xl:items-end">
           <div>
             <h2 className="font-display text-xl font-semibold text-white">
               Your sessions
             </h2>
-            <p className="mt-1 text-sm text-white/50">
-              Tick off each exercise as you go — finish them all and the day
-              lights up on your heatmap.
-            </p>
           </div>
           <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 xl:flex xl:w-auto">
             {workouts.length > 0 && (
@@ -547,7 +540,7 @@ export default function LibraryPage() {
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
               aria-label="New workout session name"
-              placeholder="Session name, e.g. Push day"
+              placeholder="Session name"
               className="min-w-0 flex-1 rounded-lg xl:w-60 xl:flex-none border border-white/10 bg-ink-850 px-3.5 py-2.5 text-sm text-white placeholder:text-white/50 focus:border-accent/50 focus:outline-none"
             />
             <button
@@ -562,9 +555,7 @@ export default function LibraryPage() {
         {workouts.length === 0 ? (
           <div className="rounded-xl border border-dashed border-white/20 bg-ink-850/50 px-5 py-12 text-center">
             <p className="text-white/60">
-              No sessions yet. Create one above (like &ldquo;Chest&rdquo; or
-              &ldquo;Leg day&rdquo;), then add exercises to it from any
-              exercise page or the inline exercise picker.
+              No sessions yet. Create your first session above.
             </p>
           </div>
         ) : (
@@ -573,7 +564,7 @@ export default function LibraryPage() {
               <WorkoutBlock
                 key={w.id}
                 workout={w}
-                isCollapsed={Boolean(collapsedWorkouts[w.id])}
+                isCollapsed={collapsedWorkouts[w.id] ?? true}
                 onToggleCollapse={() => toggleWorkoutCollapse(w.id)}
               />
             ))}

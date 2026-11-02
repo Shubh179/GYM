@@ -64,13 +64,14 @@ async function inspect(page, label) {
   await page.setViewportSize(size);
   for(const route of ['/library','/search','/favourites','/timer','/spotify']){
    await page.goto(baseURL+route,{waitUntil:'networkidle',timeout:60000});
-   if(route==='/library')await page.getByRole('heading',{name:'Your sessions'}).waitFor();
+   if(route==='/library') { await page.getByRole('heading',{name:'Your sessions'}).waitFor(); await page.getByRole('button',{name:'Expand all workout sessions',exact:true}).click(); }
    if(route==='/favourites')await page.locator('main img').first().waitFor();
    await inspect(page,route.slice(1));
   }
  }
  await page.setViewportSize({width:320,height:568});
  await page.goto(baseURL+'/library',{waitUntil:'networkidle'});
+ await page.getByRole('button',{name:'Expand all workout sessions',exact:true}).click();
 
  await page.locator('button[aria-label$=": 1 completed sessions"]').last().click();
  await page.getByText('Workout Details',{exact:true}).waitFor();

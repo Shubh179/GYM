@@ -1867,3 +1867,13 @@ Shared `.page-shell` gives My Training, Browse, Favourites, Spotify, Timer, exer
 - Built-in data and committed custom exercise files are bundled for reads. Browser-local workouts/favourites do not require a database. Runtime custom-exercise creation requires durable external storage; local JSON writes cannot persist on Vercel. Temporary caches and legacy generated MP4 storage also have hosting limitations documented in README.md.
 
 The default `/` redirect is also defined in `next.config.mjs` so production returns an HTTP 307 with `Location: /library` before static-page handling. The root page retains its redirect as a fallback.
+
+## Compact Session Defaults and Page Copy
+
+Workout sessions start collapsed, including newly created sessions. The collapsed state defaults to true for IDs without a local override; individual and Expand all/Collapse all controls explicitly toggle that state. Collapsed rows show the session name, exercise count, and progress; exercise management controls appear after expansion.
+
+Removed decorative taglines, eyebrow text, repeated instructions, and long introductions from the navigation, training dashboard, activity calendar, Browse, Favourites, Timer, Spotify, video panels, and footer. Mobile training headers are shorter, the redundant Browse shortcut is desktop-only, and empty-state text is concise. Input labels, validation messages, session progress, useful Spotify link instructions, and attribution remain.
+
+## Weekly Schedule Notepad
+
+`WeeklySchedule.tsx` appears on My Training between Training Activity and Your Sessions. It provides a resizable, multiline Monday-Sunday notepad with a seven-day starter template. Edits save immediately to browser localStorage under `repvisual:weekly-schedule:v1`, including deliberately blank schedules, and restore on reload. A small Saved status confirms persistence; storage/load errors remain visible without clearing the draft. The schedule is browser-local and does not sync across devices. The editor uses 16px mobile text and full-width responsive sizing.

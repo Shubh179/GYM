@@ -1,4 +1,4 @@
-﻿const {chromium}=require('playwright-core');const fs=require('node:fs/promises');const assert=require('node:assert/strict');
+const {chromium}=require('playwright-core');const fs=require('node:fs/promises');const assert=require('node:assert/strict');
 (async()=>{
  const directory='artifacts/exercise-grid';await fs.mkdir(directory,{recursive:true});
  const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
@@ -14,6 +14,7 @@
   await page.setViewportSize({width,height:844});
   for(const route of ['/search','/favourites','/library']){
    await page.goto('http://localhost:3000'+route,{waitUntil:'networkidle',timeout:60000});
+   if(route==='/library') await page.getByRole('button',{name:'Expand all workout sessions',exact:true}).click();
    await page.locator('[data-exercise-card]').first().waitFor();
    const result=await page.evaluate(()=>{
     const rect=element=>{const r=element.getBoundingClientRect();return {width:r.width,height:r.height,top:r.top}};

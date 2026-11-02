@@ -143,9 +143,6 @@ export default function WorkoutHeatmap() {
           <h2 className="font-display text-base font-semibold text-white">
             Training activity
           </h2>
-          <p className="mt-1 text-sm text-white/50">
-            A year of work, one day at a time. Select a day for details.
-          </p>
         </div>
         <div className="flex w-full gap-6 border-t border-white/10 pt-4 text-sm sm:w-auto sm:border-0 sm:pt-0">
           <Stat value={hydrated ? totalSessions : 0} label="sessions" />

@@ -15,12 +15,10 @@ export default function SpotifyPage() {
     if (!problem) { setUrl(""); setName(""); }
   }
   return <div className="page-shell pb-64 pt-10">
-    <p className="page-eyebrow">Set the pace</p>
-    <h1 className="page-title">Your workout soundtrack</h1>
-    <p className="mt-2 text-white/50">Keep your Spotify music and podcasts alongside your training. The player stays open as you browse the app.</p>
+    <h1 className="page-title">Spotify</h1>
     <section aria-label="Example Spotify playlist" className="mt-8 rounded-2xl border border-accent/20 bg-ink-850 p-4 sm:p-5">
       <h2 className="font-display text-xl font-bold text-white">Try it: Beast Mode</h2>
-      <p className="mb-4 mt-2 text-sm text-white/50">Press Play inside the player and select tracks from the playlist below. Everything plays here in your gym app.</p>
+      <p className="mb-4 mt-2 text-sm text-white/50">Play music without leaving your workout.</p>
       {!activeKey ? <iframe
         title="Spotify Beast Mode workout playlist"
         src="https://open.spotify.com/embed/playlist/37i9dQZF1DX76Wlfdnj7AP?utm_source=generator&theme=0"
@@ -36,7 +34,7 @@ export default function SpotifyPage() {
     </section>
     <form onSubmit={submit} className="my-8 space-y-4 rounded-2xl border border-white/10 bg-ink-850 p-5">
       <h2 className="font-display text-lg font-bold text-white">Add Spotify music</h2>
-      <p className="text-sm text-white/50">In Spotify, choose Share, then Copy link. Paste a playlist, album, track, artist, podcast, or episode link.</p>
+      <p className="text-sm text-white/50">Paste a Spotify share link.</p>
       <label className="block text-sm text-white/70">Spotify link
         <input required type="url" value={url} onChange={event => setUrl(event.target.value)} placeholder="https://open.spotify.com/playlist/..." className="mt-1 block w-full rounded-xl border border-white/15 bg-ink-900 px-3 py-2.5 text-white focus:border-accent/50 focus:outline-none" />
       </label>
@@ -58,6 +56,5 @@ export default function SpotifyPage() {
           <button type="button" onClick={() => remove(item.key)} aria-label={`Remove ${item.name}`} className="text-white/50 hover:text-red-400">Remove</button>
         </div>
       </div>)}</div>}
-    <p className="mt-6 text-xs text-white/50">Links are saved on this device. Playback and availability are handled by Spotify; use Open Spotify if a link cannot play here.</p>
   </div>;
 }
