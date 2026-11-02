@@ -98,9 +98,15 @@ async function inspect(page, label) {
  const addTarget=await page.getByRole('button',{name:'Add',exact:true}).first().boundingBox();
  if(!addTarget || addTarget.height<44)throw new Error('Inline Add touch target is under 44px');
  await page.getByRole('button',{name:'+ Create exercise',exact:true}).click();
- await page.getByLabel('Exercise name',{exact:true}).fill('Test custom exercise');
- await page.getByLabel('YouTube link',{exact:true}).fill('https://youtu.be/dQw4w9WgXcQ');
- await inspect(page,'create-exercise-form');report.interactions.push('Custom exercise form accepts input without saving test records');
+ await page.getByText('Checking access...', {exact:true}).waitFor({state:'hidden'});
+ if(await page.getByLabel('Exercise name',{exact:true}).count()) {
+   await page.getByLabel('Exercise name',{exact:true}).fill('Test custom exercise');
+   await page.getByLabel('YouTube link',{exact:true}).fill('https://youtu.be/dQw4w9WgXcQ');
+   report.interactions.push('Custom exercise form accepts input without saving test records');
+ } else {
+   report.interactions.push('Custom exercise publishing is protected by the sign-in/configuration panel');
+ }
+ await inspect(page,'create-exercise-form');
  await page.goto(baseURL+'/timer',{waitUntil:'networkidle'});
  await page.getByRole('button',{name:'Start',exact:true}).click();
  await page.getByRole('button',{name:'Pause',exact:true}).waitFor();

@@ -87,6 +87,32 @@ The first command creates a preview deployment; the second deploys to production
 
 A database is not required for browsing the bundled dataset or browser-local favourites, sessions, workout history, notes, timers, and saved Spotify links. These browser-local records do not sync across devices or domains.
 
-**Creating new custom exercises after deployment requires durable storage before that feature can work reliably.** The current implementation writes JSON under `data/custom/`, which works locally but is not writable durable storage on Vercel. Existing custom JSON files can be committed with the repository and read as bundled data. A database or persistent object store is needed for new deployed additions. AI/YouTube runtime caches are temporary; the legacy Veo route also needs external storage for generated MP4 files. No database has been configured by these deployment scripts.
+Custom exercises now use Supabase when configured. Public database reads are merged with committed custom JSON records; successful saves go to Supabase, never the deployment filesystem. Local JSON writes remain available only in development without Supabase. AI/YouTube runtime caches are temporary; the legacy Veo route still needs external storage for generated MP4 files.
 
 Official deployment settings: https://vercel.com/docs/project-configuration/vercel-json
+
+
+## Supabase custom exercises
+
+Set these variables in `.env.local` and Vercel (Production and Preview):
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+CUSTOM_EXERCISE_ADMIN_EMAIL=
+```
+
+The secret must be server-only and must never be committed or given a `NEXT_PUBLIC_` prefix. If a secret has been pasted into chat or exposed, rotate it in Supabase first.
+
+1. Run `supabase/migrations/202611020001_custom_exercises.sql` in Supabase SQL Editor if the table is not already configured. The existing table and public-read policy from the setup guide are supported.
+2. In Supabase **Authentication > Users**, create an app user with a confirmed email and a password. This account is separate from the Supabase dashboard account. Set `CUSTOM_EXERCISE_ADMIN_EMAIL` to that email. Public signup is not required by the app.
+3. Run `npm run db:import-exercises -- --dry-run`, then `npm run db:import-exercises` to import existing local custom records. Existing slugs are preserved and local files are retained.
+4. Restart the local server after changing `.env.local`. Add all four variables to Vercel and redeploy so the public settings are available in the browser build.
+5. Open **Create exercise**, sign in with that app user, and save a name and YouTube link.
+
+Database reads use the publishable key and public-read RLS policy. The server validates the user's token with Supabase Auth and requires a confirmed email matching the server-side admin email before any privileged insert. Anonymous requests return 401, other accounts return 403, and missing publishing configuration returns 503. Browser clients cannot insert directly through RLS. No secret key is returned by the API or bundled into client code.
+
+The weekly schedule, workouts, favourites, history, personal notes, timers, and Spotify links still use browser storage. Supabase currently stores only custom exercise metadata.
+
+Checks: `node tests/supabase-storage.cjs` covers persistence selection, pagination, deduplication, database outages, duplicate inserts, and write authorization.

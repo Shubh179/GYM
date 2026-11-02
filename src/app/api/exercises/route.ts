@@ -1,3 +1,4 @@
+import { exerciseAccess, ExerciseStorageUnavailableError } from "@/lib/supabase-server";
 import { saveCustomExercise, youtubeVideoId } from "@/lib/custom-exercises";
 import { getBySlug, slugify } from "@/lib/exercises";
 import type { Exercise } from "@/lib/types";
@@ -28,6 +29,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const access = await exerciseAccess(req.headers.get("authorization"));
+  if (!access.canCreate) {
+    return NextResponse.json({ error: !access.configured ? "Exercise publishing is not configured yet." : access.signedIn ? "This account is not allowed to add exercises." : "Sign in to add an exercise." },
+      { status: !access.configured ? 503 : access.signedIn ? 403 : 401 });
+  }
   let body;
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
@@ -45,11 +51,12 @@ export async function POST(req: NextRequest) {
       level: "custom", category: "custom", equipment: null, mechanic: null, force: null,
       primaryMuscles: [], secondaryMuscles: [], instructions: [], imageUrls: [`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`],
     };
-    await saveCustomExercise(exercise);
-    return NextResponse.json({ exercise }, { status: 201 });
+    const saved = await saveCustomExercise(exercise);
+    return NextResponse.json({ exercise: saved }, { status: 201 });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return NextResponse.json({ error: "An exercise with this name already exists." }, { status: 409 });
-    console.error("Could not save custom exercise", error);
+    if (error instanceof ExerciseStorageUnavailableError) return NextResponse.json({ error: error.message }, { status: 503 });
+    console.error("Could not save custom exercise.");
     return NextResponse.json({ error: "Could not save the exercise. Please try again." }, { status: 500 });
   }
 }
