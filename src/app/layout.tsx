@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { SpotifyProvider } from "@/components/SpotifyProvider";
 import Navbar from "@/components/Navbar";
+import FloatingTimer from "@/components/FloatingTimer";
 import { LibraryProvider } from "@/lib/library";
+import { TimerProvider } from "@/lib/timer";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,12 +28,17 @@ export default function RootLayout({
     <html lang="en" className={inter.variable}>
       <body className="min-h-screen font-sans antialiased">
         <LibraryProvider>
-          <Navbar />
-          <main>{children}</main>
-          <footer className="mt-20 border-t border-white/10 px-5 py-8 text-center text-xs text-white/30">
-            Exercise data from free-exercise-db (MIT). Images via jsDelivr CDN.
-            AI breakdowns by Claude.
-          </footer>
+          <TimerProvider>
+            <SpotifyProvider>
+            <Navbar />
+            <main>{children}</main>
+            <FloatingTimer />
+            <footer className="page-shell mt-16 flex flex-col gap-3 border-t border-white/10 py-7 text-xs text-white/50 sm:flex-row sm:items-center sm:justify-between">
+              <span className="font-semibold tracking-tight text-white/60">RepVisual <span className="ml-2 font-normal text-white/50">Built for the work.</span></span>
+              <span>Exercise data: free-exercise-db. Your training stays on this device.</span>
+            </footer>
+            </SpotifyProvider>
+          </TimerProvider>
         </LibraryProvider>
       </body>
     </html>

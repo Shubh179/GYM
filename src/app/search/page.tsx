@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import AddExerciseForm from "@/components/AddExerciseForm";
 import SearchBar from "@/components/SearchBar";
 import ExerciseCard from "@/components/ExerciseCard";
 import type { SearchResult } from "@/lib/types";
@@ -31,22 +32,29 @@ function Results() {
     : "All exercises";
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10">
-      <div className="mx-auto mb-8 max-w-2xl">
+    <div className="page-shell py-10">
+      <div className="mb-8 border-b border-white/10 pb-7">
+        <p className="page-eyebrow">Exercise library</p>
+        <h1 className="page-title">Find your next movement.</h1>
+        <p className="mt-3 text-sm text-white/60">Demonstrations, technique, and your own exercises. All in one place.</p>
+      </div>
+      <div className="mb-8 max-w-2xl">
         <SearchBar size="md" initialQuery={q} />
       </div>
 
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="font-display text-2xl font-bold capitalize text-white">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-display text-lg font-semibold text-white">
           {heading}
-        </h1>
+        </h2>
         {!loading && (
-          <span className="text-sm text-white/40">{results.length} found</span>
+          <span className="text-sm text-white/50">{results.length} found</span>
         )}
       </div>
 
+      <AddExerciseForm onCreated={exercise => setResults(previous => [exercise, ...previous.filter(item => item.slug !== exercise.slug)])} />
+
       {loading ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
@@ -55,7 +63,7 @@ function Results() {
           ))}
         </div>
       ) : results.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {results.map((r, i) => (
             <ExerciseCard key={r.slug} result={r} index={i} />
           ))}
@@ -70,7 +78,7 @@ function Results() {
               href={`/exercise/${encodeURIComponent(
                 q.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
               )}`}
-              className="mt-4 inline-block rounded-xl bg-lime px-5 py-2.5 font-semibold text-ink-950 transition hover:bg-lime-soft"
+              className="mt-4 inline-block rounded-xl bg-accent px-5 py-2.5 font-semibold text-ink-950 transition hover:bg-accent-soft"
             >
               Generate it with AI →
             </a>
@@ -83,7 +91,7 @@ function Results() {
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-white/40">Loading…</div>}>
+    <Suspense fallback={<div className="py-20 text-center text-white/50">Loading…</div>}>
       <Results />
     </Suspense>
   );

@@ -1,6 +1,6 @@
 // Downloads the free-exercise-db dataset into data/exercises.json
 // Run with: npm run setup
-import { writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,15 @@ const SOURCE =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
 
 async function main() {
+  if (process.argv.includes("--if-missing") && existsSync(OUT_FILE)) {
+    const existing = JSON.parse(await readFile(OUT_FILE, "utf8"));
+    const list = Array.isArray(existing) ? existing : existing.exercises;
+    if (!Array.isArray(list) || list.length === 0) {
+      throw new Error("Bundled exercise dataset is invalid. Run npm run setup to refresh it.");
+    }
+    console.log(`Using bundled dataset (${list.length} exercises).`);
+    return;
+  }
   if (!existsSync(DATA_DIR)) await mkdir(DATA_DIR, { recursive: true });
   if (!existsSync(GENERATED_DIR)) await mkdir(GENERATED_DIR, { recursive: true });
 

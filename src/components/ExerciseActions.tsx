@@ -17,6 +17,7 @@ export default function ExerciseActions({
     addToWorkout,
     isInWorkout,
     createWorkout,
+    hasNote,
   } = useLibrary();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -24,6 +25,7 @@ export default function ExerciseActions({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const faved = hydrated && isFavourite(exercise.slug);
+  const noteSaved = hydrated && hasNote(exercise.slug);
 
   // Close the workout menu on outside click.
   useEffect(() => {
@@ -45,6 +47,13 @@ export default function ExerciseActions({
     }
   }
 
+  function handleScrollToNotes() {
+    const section = document.getElementById("my-quick-notes");
+    section?.scrollIntoView({ behavior: "smooth" });
+    const ta = document.getElementById("my-quick-notes-textarea");
+    ta?.focus();
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       <button
@@ -52,8 +61,8 @@ export default function ExerciseActions({
         aria-pressed={faved}
         className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
           faved
-            ? "border-lime/50 bg-lime/15 text-lime"
-            : "border-white/15 bg-ink-850 text-white/80 hover:border-lime/40 hover:text-lime"
+            ? "border-accent/50 bg-accent/15 text-accent"
+            : "border-white/15 bg-ink-850 text-white/80 hover:border-accent/40 hover:text-accent"
         }`}
       >
         <svg
@@ -68,10 +77,32 @@ export default function ExerciseActions({
         {faved ? "Saved" : "Save to favourites"}
       </button>
 
+      {/* Quick Notes jump button */}
+      <button
+        onClick={handleScrollToNotes}
+        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition ${
+          noteSaved
+            ? "border-accent/50 bg-accent/15 text-accent"
+            : "border-white/15 bg-ink-850 text-white/80 hover:border-accent/40 hover:text-accent"
+        }`}
+      >
+        <svg
+          className="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+        {noteSaved ? "Notes (saved)" : "Quick Notes"}
+      </button>
+
       <div className="relative" ref={menuRef}>
         <button
           onClick={() => setMenuOpen((o) => !o)}
-          className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-ink-850 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:border-lime/40 hover:text-lime"
+          className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-ink-850 px-4 py-2.5 text-sm font-semibold text-white/80 transition hover:border-accent/40 hover:text-accent"
         >
           <svg
             className="h-4 w-4"
@@ -87,12 +118,12 @@ export default function ExerciseActions({
 
         {menuOpen && (
           <div className="absolute left-0 z-50 mt-2 w-64 rounded-xl border border-white/10 bg-ink-850 p-2 shadow-card">
-            <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/40">
+            <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-white/50">
               Add to a workout
             </p>
             <div className="max-h-48 overflow-y-auto">
               {workouts.length === 0 && (
-                <p className="px-2 py-2 text-xs text-white/40">
+                <p className="px-2 py-2 text-xs text-white/50">
                   No workouts yet. Create one below.
                 </p>
               )}
@@ -105,7 +136,7 @@ export default function ExerciseActions({
                     disabled={added}
                     className={`flex w-full items-center justify-between rounded-lg px-2 py-2 text-left text-sm transition ${
                       added
-                        ? "cursor-default text-lime"
+                        ? "cursor-default text-accent"
                         : "text-white/80 hover:bg-white/5"
                     }`}
                   >
@@ -113,7 +144,7 @@ export default function ExerciseActions({
                     {added ? (
                       <span className="text-xs">Added ✓</span>
                     ) : (
-                      <span className="text-xs text-white/30">Add</span>
+                      <span className="text-xs text-white/50">Add</span>
                     )}
                   </button>
                 );
@@ -125,11 +156,11 @@ export default function ExerciseActions({
                 onChange={(e) => setNewName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
                 placeholder="New workout…"
-                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-900 px-2.5 py-1.5 text-sm text-white placeholder:text-white/30 focus:border-lime/50 focus:outline-none"
+                className="min-w-0 flex-1 rounded-lg border border-white/10 bg-ink-900 px-2.5 py-1.5 text-sm text-white placeholder:text-white/50 focus:border-accent/50 focus:outline-none"
               />
               <button
                 onClick={handleCreate}
-                className="rounded-lg bg-lime px-3 py-1.5 text-sm font-semibold text-ink-950 transition hover:bg-lime-soft"
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-ink-950 transition hover:bg-accent-soft"
               >
                 Create
               </button>

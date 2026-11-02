@@ -1,0 +1,16 @@
+{
+  "id": "custom-lower-chest-cable",
+  "slug": "lower-chest-cable",
+  "name": "Lower Chest Cable",
+  "source": "custom",
+  "youtubeVideoId": "EOKbusjoNtM",
+  "level": "custom",
+  "category": "custom",
+  "equipment": null,
+  "mechanic": null,
+  "force": null,
+  "primaryMuscles": [],
+  "secondaryMuscles": [],
+  "instructions": [],
+  "imageUrls": []
+}

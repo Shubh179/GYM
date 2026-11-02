@@ -1,9 +1,11 @@
 import { getBySlug } from "@/lib/exercises";
 import { readCached } from "@/lib/cache";
 import { resolveExerciseVideo } from "@/lib/youtube";
-import { searchEmbedUrl } from "@/lib/youtube-embed";
+import { watchEmbedUrl, searchEmbedUrl } from "@/lib/youtube-embed";
 import ExerciseView from "@/components/ExerciseView";
 import GenerateFlow from "@/components/GenerateFlow";
+
+export const dynamic = "force-dynamic";
 
 export default async function ExercisePage({
   params,
@@ -15,6 +17,9 @@ export default async function ExercisePage({
   // 1. Dataset hit — render instantly on the server.
   const dataset = await getBySlug(slug);
   if (dataset) {
+    if (dataset.source === "custom" && dataset.youtubeVideoId) {
+      return <ExerciseView exercise={dataset} embedUrl={watchEmbedUrl(dataset.youtubeVideoId)} />;
+    }
     const context = dataset.primaryMuscles[0] ?? dataset.category;
     const embedUrl =
       (await resolveExerciseVideo({ slug, name: dataset.name, context })) ??

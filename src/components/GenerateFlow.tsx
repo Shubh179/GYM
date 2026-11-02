@@ -58,9 +58,9 @@ export default function GenerateFlow({
 
   // no-key or error — both show a friendly notice + nearest dataset matches.
   return (
-    <div className="mx-auto max-w-4xl px-5 py-16">
-      <div className="rounded-3xl border border-white/10 bg-ink-850 p-8 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime/10 text-2xl font-black text-lime">
+    <div className="page-shell py-16">
+      <div className="rounded-2xl border border-white/10 bg-ink-850 p-8 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10 text-2xl font-black text-accent">
           AI
         </div>
         <h1 className="font-display text-2xl font-bold text-white">
@@ -72,7 +72,7 @@ export default function GenerateFlow({
           {status === "no-key" ? (
             <>
               “{readableName}” isn&apos;t in the dataset. Add an{" "}
-              <code className="rounded bg-ink-700 px-1.5 py-0.5 text-lime">
+              <code className="rounded bg-ink-700 px-1.5 py-0.5 text-accent">
                 ANTHROPIC_API_KEY
               </code>{" "}
               to enable on-demand AI breakdowns. Meanwhile, here are the closest
@@ -101,7 +101,7 @@ export default function GenerateFlow({
       )}
 
       <div className="mt-10 text-center">
-        <Link href="/" className="text-sm text-lime hover:underline">
+        <Link href="/" className="text-sm text-accent hover:underline">
           ← Back to home
         </Link>
       </div>

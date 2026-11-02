@@ -40,7 +40,7 @@ export default function MuscleMap({
       </h3>
       <div className="space-y-4">
         <div>
-          <p className="mb-2 text-xs font-medium text-lime">Primary</p>
+          <p className="mb-2 text-xs font-medium text-accent">Primary</p>
           <div className="flex flex-wrap gap-2">
             {primary.length ? (
               primary.map((m, i) => (
@@ -49,13 +49,13 @@ export default function MuscleMap({
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: i * 0.05 }}
-                  className="rounded-lg border border-lime/40 bg-lime/10 px-3 py-1.5 text-sm font-medium text-lime-soft"
+                  className="rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 text-sm font-medium text-accent-soft"
                 >
                   {label(m)}
                 </motion.span>
               ))
             ) : (
-              <span className="text-sm text-white/40">—</span>
+              <span className="text-sm text-white/50">—</span>
             )}
           </div>
         </div>

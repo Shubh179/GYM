@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useLibrary } from "@/lib/library";
 
 // A GitHub/LeetCode-style contribution grid of completed workout sessions.
@@ -24,10 +25,10 @@ function dayKey(d: Date): string {
 
 function levelClass(count: number): string {
   if (count <= 0) return "bg-white/[0.06]";
-  if (count === 1) return "bg-lime/40";
-  if (count === 2) return "bg-lime/60";
-  if (count === 3) return "bg-lime/80";
-  return "bg-lime";
+  if (count === 1) return "bg-accent/40";
+  if (count === 2) return "bg-accent/60";
+  if (count === 3) return "bg-accent/80";
+  return "bg-accent";
 }
 
 interface Cell {
@@ -39,7 +40,9 @@ interface Cell {
 }
 
 export default function WorkoutHeatmap() {
-  const { hydrated, completions } = useLibrary();
+  const { hydrated, completions, getHistoryForDate } = useLibrary();
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const selectedSessions = selectedDay ? getHistoryForDate(selectedDay) : [];
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { columns, monthLabels, totalSessions, activeDays, streak } =
@@ -108,6 +111,24 @@ export default function WorkoutHeatmap() {
       };
     }, [completions]);
 
+  function formatDateLabel(dk: string): string {
+    const [y, m, d] = dk.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  function formatTime(iso: string): string {
+    return new Date(iso).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
   // The newest week (today) is at the far right; scroll there on mount and
   // whenever a session is logged so a freshly completed day is in view.
   useEffect(() => {
@@ -116,17 +137,17 @@ export default function WorkoutHeatmap() {
   }, [hydrated, completions]);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-ink-850 p-5">
+    <section className="rounded-xl border border-white/10 bg-ink-850 p-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-display text-xl font-bold text-white">
+          <h2 className="font-display text-base font-semibold text-white">
             Training activity
           </h2>
           <p className="mt-1 text-sm text-white/50">
-            A day lights up when you finish every exercise in a session.
+            A year of work, one day at a time. Select a day for details.
           </p>
         </div>
-        <div className="flex gap-5 text-sm">
+        <div className="flex w-full gap-6 border-t border-white/10 pt-4 text-sm sm:w-auto sm:border-0 sm:pt-0">
           <Stat value={hydrated ? totalSessions : 0} label="sessions" />
           <Stat value={hydrated ? activeDays : 0} label="active days" />
           <Stat value={hydrated ? streak : 0} label="day streak" />
@@ -136,7 +157,7 @@ export default function WorkoutHeatmap() {
       <div className="overflow-x-auto pb-1" ref={scrollRef}>
         <div className="inline-block min-w-full">
           {/* Month labels */}
-          <div className="relative ml-8 h-4 text-[10px] text-white/40">
+          <div className="relative ml-8 h-4 text-[10px] text-white/50">
             {monthLabels.map((m) => (
               <span
                 key={`${m.col}-${m.text}`}
@@ -150,7 +171,7 @@ export default function WorkoutHeatmap() {
 
           <div className="flex gap-[3px]">
             {/* Weekday labels */}
-            <div className="mr-1 flex w-7 flex-col gap-[3px] text-[9px] leading-[11px] text-white/40">
+            <div className="mr-1 flex w-7 flex-col gap-[3px] text-[9px] leading-[11px] text-white/50">
               {WEEKDAYS.map((d, i) => (
                 <span key={i} className="h-[11px]">
                   {d}
@@ -165,14 +186,18 @@ export default function WorkoutHeatmap() {
                   cell.future ? (
                     <span key={cell.key} className="h-[11px] w-[11px]" />
                   ) : (
-                    <span
+                    <button
+                      type="button"
                       key={cell.key}
+                      onClick={() => setSelectedDay((day) => day === cell.key ? null : cell.key)}
+                      aria-pressed={selectedDay === cell.key}
+                      aria-label={`${cell.label}: ${cell.count} completed sessions`}
                       title={
                         cell.count > 0
                           ? `${cell.count} session${cell.count === 1 ? "" : "s"} on ${cell.label}`
                           : `No sessions on ${cell.label}`
                       }
-                      className={`h-[11px] w-[11px] rounded-[2px] ${levelClass(
+                      className={`h-[11px] w-[11px] shrink-0 rounded-[2px] transition hover:ring-2 hover:ring-accent/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${selectedDay === cell.key ? "ring-2 ring-accent" : ""} ${levelClass(
                         hydrated ? cell.count : 0,
                       )} ${cell.isToday ? "ring-1 ring-white/70" : ""}`}
                     />
@@ -185,7 +210,7 @@ export default function WorkoutHeatmap() {
       </div>
 
       {/* Legend */}
-      <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-white/40">
+      <div className="mt-3 flex items-center justify-end gap-1.5 text-[10px] text-white/50">
         <span>Less</span>
         {[0, 1, 2, 3, 4].map((n) => (
           <span
@@ -195,6 +220,112 @@ export default function WorkoutHeatmap() {
         ))}
         <span>More</span>
       </div>
+      {/* Detail panel */}
+      <AnimatePresence mode="wait">
+        {selectedDay && (
+          <motion.div
+            key={selectedDay}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-2xl border border-white/10 bg-ink-900/60 p-4">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/50">
+                    Workout Details
+                  </p>
+                  <h3 className="mt-1 font-display text-lg font-bold text-white">
+                    {formatDateLabel(selectedDay)}
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setSelectedDay(null)}
+                  aria-label="Close"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-white/10 text-white/50 transition hover:text-white"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+
+              {selectedSessions.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-white/10 bg-ink-850/50 p-6 text-center">
+                  <p className="text-sm text-white/50">
+                    No completed workout recorded for this day.
+                  </p>
+                </div>
+              ) : (
+                <div className="max-h-72 space-y-3 overflow-y-auto pr-1">
+                  {selectedSessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className="rounded-xl border border-accent/20 bg-accent/[0.03] p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <h4 className="font-display font-semibold text-white">
+                          {session.workoutName}
+                        </h4>
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
+                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                          Completed
+                        </span>
+                      </div>
+
+                      {session.exercises.length > 0 ? (
+                        <ul className="space-y-1.5">
+                          {session.exercises.map((ex, i) => (
+                            <li
+                              key={`${ex.slug}-${i}`}
+                              className="flex items-center gap-3"
+                            >
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-ink-700">
+                                {ex.thumbUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={ex.thumbUrl}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-[8px] font-bold text-accent">
+                                    AI
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-sm text-white/80">
+                                {ex.name}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-white/50">
+                          No exercise details recorded.
+                        </p>
+                      )}
+
+                      <p className="mt-3 text-xs text-white/50">
+                        Completed at {formatTime(session.completedAt)}
+                      </p>
+
+                      {session.notes && (
+                        <p className="mt-2 rounded-lg bg-ink-800 px-3 py-2 text-xs text-white/60">
+                          {session.notes}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -202,10 +333,10 @@ export default function WorkoutHeatmap() {
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="text-right">
-      <div className="font-display text-2xl font-black leading-none text-lime">
+      <div className="font-display text-xl font-semibold tabular-nums leading-none text-white">
         {value}
       </div>
-      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-white/40">
+      <div className="mt-0.5 text-[11px] uppercase tracking-wide text-white/50">
         {label}
       </div>
     </div>

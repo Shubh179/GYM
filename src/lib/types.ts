@@ -30,7 +30,8 @@ export interface Exercise {
   instructions: string[];
   // Full CDN image URLs. [0] = start position, [1] = finish position.
   imageUrls: string[];
-  source: "dataset";
+  source: "dataset" | "custom";
+  youtubeVideoId?: string;
 }
 
 // AI-generated guide for exercises not in the dataset.

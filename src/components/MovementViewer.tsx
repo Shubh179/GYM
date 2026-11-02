@@ -53,14 +53,14 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
 
   if (!hasPhotos && !hasPose) {
     return (
-      <div className="flex aspect-square w-full items-center justify-center rounded-3xl border border-white/10 bg-ink-850 text-white/40">
+      <div className="flex aspect-square w-full items-center justify-center rounded-2xl border border-white/10 bg-ink-850 text-white/50">
         No visualization available.
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-ink-850 shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-ink-850 shadow-card">
       <div className="relative aspect-square w-full bg-gradient-to-b from-ink-800 to-ink-950">
         {hasPhotos ? (
           <>
@@ -86,7 +86,7 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
               t < 0.5
-                ? "bg-lime text-ink-950"
+                ? "bg-accent text-ink-950"
                 : "bg-ink-950/70 text-white/60 backdrop-blur"
             }`}
           >
@@ -95,7 +95,7 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
               t >= 0.5
-                ? "bg-lime text-ink-950"
+                ? "bg-accent text-ink-950"
                 : "bg-ink-950/70 text-white/60 backdrop-blur"
             }`}
           >
@@ -114,7 +114,7 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
             setPlaying((p) => !p);
           }}
           aria-label={playing ? "Pause" : "Play"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-lime text-ink-950 transition hover:bg-lime-soft"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-ink-950 transition hover:bg-accent-soft"
         >
           {playing ? (
             <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
@@ -136,7 +136,7 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
           value={t}
           onChange={(e) => onScrub(parseFloat(e.target.value))}
           aria-label="Scrub between start and finish"
-          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-ink-700 accent-lime"
+          className="h-2 flex-1 cursor-pointer appearance-none rounded-full bg-ink-700 accent-accent"
         />
 
         <div className="flex shrink-0 items-center gap-1 rounded-full bg-ink-800 p-1">
@@ -145,7 +145,7 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
               key={s}
               onClick={() => setSpeed(s)}
               className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
-                speed === s ? "bg-lime text-ink-950" : "text-white/50 hover:text-white"
+                speed === s ? "bg-accent text-ink-950" : "text-white/50 hover:text-white"
               }`}
             >
               {s}x

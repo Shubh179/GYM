@@ -16,9 +16,9 @@ export default function Hero() {
         <motion.span
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 rounded-full border border-lime/30 bg-lime/10 px-4 py-1.5 text-xs font-medium text-lime-soft"
+          className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-1.5 text-xs font-medium text-accent-soft"
         >
-          <span className="h-1.5 w-1.5 rounded-full bg-lime" />
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
           873 exercises · animated demonstrations · AI fallback
         </motion.span>
 
@@ -28,7 +28,7 @@ export default function Hero() {
           transition={{ delay: 0.08 }}
           className="mt-6 font-display text-4xl font-black leading-[1.05] tracking-tight text-white sm:text-6xl"
         >
-          See <span className="text-lime">exactly</span> how
+          See <span className="text-accent">exactly</span> how
           <br className="hidden sm:block" /> to perform any exercise
         </motion.h1>
 
@@ -49,14 +49,14 @@ export default function Hero() {
           className="mx-auto mt-9 max-w-xl"
         >
           <SearchBar autoFocus />
-          <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-white/40">
+          <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs text-white/50">
             <span>Try:</span>
             {["Incline Dumbbell Press", "Barbell Squat", "Pullups", "Plank"].map(
               (ex) => (
                 <a
                   key={ex}
                   href={`/search?q=${encodeURIComponent(ex)}`}
-                  className="rounded-full border border-white/10 px-3 py-1 text-white/60 transition hover:border-lime/40 hover:text-lime"
+                  className="rounded-full border border-white/10 px-3 py-1 text-white/60 transition hover:border-accent/40 hover:text-accent"
                 >
                   {ex}
                 </a>

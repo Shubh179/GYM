@@ -9,17 +9,17 @@ const config: Config = {
     extend: {
       colors: {
         ink: {
-          950: "#07070a",
-          900: "#0b0b10",
-          850: "#101017",
-          800: "#15151f",
-          700: "#1d1d2b",
-          600: "#2a2a3c",
+          950: "#111315",
+          900: "#171a1d",
+          850: "#1d2125",
+          800: "#24292e",
+          700: "#30363d",
+          600: "#444c56",
         },
-        lime: {
-          DEFAULT: "#c6ff2e",
-          soft: "#d6ff6b",
-          deep: "#9ad400",
+        accent: {
+          DEFAULT: "#f49b62",
+          soft: "#ffb384",
+          deep: "#d9793b",
         },
       },
       fontFamily: {
@@ -27,8 +27,8 @@ const config: Config = {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
       },
       boxShadow: {
-        glow: "0 0 40px -8px rgba(198,255,46,0.45)",
-        card: "0 10px 40px -12px rgba(0,0,0,0.7)",
+        glow: "0 1px 3px rgba(0,0,0,0.12)",
+        card: "0 2px 8px rgba(0,0,0,0.12)",
       },
       keyframes: {
         "gradient-pan": {

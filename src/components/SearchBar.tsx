@@ -90,7 +90,7 @@ export default function SearchBar({ autoFocus, size = "lg", initialQuery = "" }:
     <div ref={boxRef} className="relative w-full">
       <div className="relative">
         <svg
-          className={`pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/40 ${
+          className={`pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-white/50 ${
             size === "lg" ? "h-6 w-6" : "h-5 w-5"
           }`}
           viewBox="0 0 24 24"
@@ -108,19 +108,19 @@ export default function SearchBar({ autoFocus, size = "lg", initialQuery = "" }:
           onKeyDown={onKey}
           onFocus={() => results.length && setOpen(true)}
           placeholder="Search any exercise — e.g. incline dumbbell press"
-          className={`w-full rounded-2xl border border-white/10 bg-ink-850/80 ${pad} text-white placeholder-white/35 outline-none backdrop-blur transition focus:border-lime/60 focus:shadow-glow`}
+          className={`w-full rounded-xl border border-white/10 bg-ink-850/80 ${pad} text-white placeholder-white/35 outline-none backdrop-blur transition focus:border-accent/60 focus:ring-1 focus:ring-accent/30`}
         />
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-2xl border border-white/10 bg-ink-850/95 shadow-card backdrop-blur">
+        <div className="absolute z-30 mt-2 w-full overflow-hidden rounded-xl border border-white/10 bg-ink-850/95 shadow-card backdrop-blur">
           {results.map((r, i) => (
             <button
               key={r.slug}
               onMouseEnter={() => setActive(i)}
               onClick={() => go(r.slug)}
               className={`flex w-full items-center gap-3 px-4 py-3 text-left transition ${
-                i === active ? "bg-lime/10" : "hover:bg-white/5"
+                i === active ? "bg-accent/10" : "hover:bg-white/5"
               }`}
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-ink-700">
@@ -128,12 +128,12 @@ export default function SearchBar({ autoFocus, size = "lg", initialQuery = "" }:
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={r.thumbUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-lime">AI</span>
+                  <span className="text-accent">AI</span>
                 )}
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium text-white">{r.name}</span>
-                <span className="block truncate text-xs capitalize text-white/40">
+                <span className="block truncate text-xs capitalize text-white/50">
                   {r.primaryMuscles.join(", ") || r.category}
                 </span>
               </span>

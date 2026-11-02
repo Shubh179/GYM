@@ -8,3 +8,10 @@ data/generated/*.json
 *.log
 .DS_Store
 tsconfig.tsbuildinfo
+
+.vercel/
+
+.env.*
+!.env.example
+
+artifacts/

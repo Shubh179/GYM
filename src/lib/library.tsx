@@ -23,6 +23,16 @@ export interface Workout {
   exercises: SavedExercise[];
 }
 
+// A snapshot of a completed workout session, stored in workoutHistory.
+export interface CompletedSession {
+  id: string;
+  workoutId: string;
+  workoutName: string;
+  exercises: SavedExercise[];
+  completedAt: string; // ISO timestamp
+  notes?: string;
+}
+
 interface LibraryState {
   favourites: SavedExercise[];
   workouts: Workout[];
@@ -34,6 +44,11 @@ interface LibraryState {
   // date "YYYY-MM-DD" -> list of workout ids. Lets a session checkbox toggle
   // on/off, and lets two sessions in one day (e.g. chest + triceps) both count.
   sessionLog: Record<string, string[]>;
+  // Full workout history: date "YYYY-MM-DD" -> completed sessions with exercises.
+  // This is the source of truth for what was actually performed each day.
+  workoutHistory: Record<string, CompletedSession[]>;
+  // Personal quick notes per exercise: exercise slug -> note text
+  notes: Record<string, string>;
 }
 
 interface LibraryContextValue extends LibraryState {
@@ -55,6 +70,13 @@ interface LibraryContextValue extends LibraryState {
   // Whole-session completion (toggle the session done/undone for today).
   isSessionCompletedToday: (workoutId: string) => boolean;
   toggleSessionComplete: (workoutId: string) => void;
+  // Workout history
+  getHistoryForDate: (dateKey: string) => CompletedSession[];
+  // Personal quick notes for exercises
+  getNote: (slug: string) => string;
+  hasNote: (slug: string) => boolean;
+  setNote: (slug: string, noteText: string) => boolean;
+  clearNote: (slug: string) => boolean;
 }
 
 const STORAGE_KEY = "repvisual:library:v1";
@@ -64,6 +86,8 @@ const EMPTY: LibraryState = {
   progress: {},
   completions: {},
   sessionLog: {},
+  workoutHistory: {},
+  notes: {},
 };
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
@@ -89,6 +113,12 @@ function loadState(): LibraryState {
         parsed.sessionLog && typeof parsed.sessionLog === "object"
           ? parsed.sessionLog
           : {},
+      workoutHistory:
+        parsed.workoutHistory && typeof parsed.workoutHistory === "object"
+          ? parsed.workoutHistory
+          : {},
+      notes:
+        parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {},
     };
   } catch {
     return EMPTY;
@@ -100,12 +130,15 @@ function newId(): string {
 }
 
 // Local calendar day as "YYYY-MM-DD" (not UTC — the heatmap is a personal log).
-function todayKey(d = new Date()): string {
+export function dateToKey(d: Date = new Date()): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+// Keep the old name as an alias for internal use.
+const todayKey = dateToKey;
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<LibraryState>(EMPTY);
@@ -129,7 +162,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
 
   const isFavourite = useCallback(
     (slug: string) => state.favourites.some((f) => f.slug === slug),
-    [state.favourites],
+    [state.favourites]
   );
 
   const toggleFavourite = useCallback((ex: SavedExercise) => {
@@ -158,7 +191,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({
       ...s,
       workouts: s.workouts.map((w) =>
-        w.id === id ? { ...w, name: trimmed } : w,
+        w.id === id ? { ...w, name: trimmed } : w
       ),
     }));
   }, []);
@@ -181,7 +214,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       workouts: s.workouts.map((w) =>
         w.id === id && !w.exercises.some((e) => e.slug === ex.slug)
           ? { ...w, exercises: [...w.exercises, ex] }
-          : w,
+          : w
       ),
     }));
   }, []);
@@ -192,7 +225,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       workouts: s.workouts.map((w) =>
         w.id === id
           ? { ...w, exercises: w.exercises.filter((e) => e.slug !== slug) }
-          : w,
+          : w
       ),
       // Drop any tick for the removed exercise so progress stays consistent.
       progress: {
@@ -205,47 +238,141 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const isInWorkout = useCallback(
     (id: string, slug: string) =>
       state.workouts.some(
-        (w) => w.id === id && w.exercises.some((e) => e.slug === slug),
+        (w) => w.id === id && w.exercises.some((e) => e.slug === slug)
       ),
-    [state.workouts],
+    [state.workouts]
   );
 
   const isExerciseDone = useCallback(
     (workoutId: string, slug: string) =>
       (state.progress[workoutId] ?? []).includes(slug),
-    [state.progress],
+    [state.progress]
   );
 
   const doneCount = useCallback(
     (workoutId: string) => (state.progress[workoutId] ?? []).length,
-    [state.progress],
+    [state.progress]
   );
 
   // Tick/untick an exercise. When every exercise in the session is ticked, the
-  // session counts as done: log today on the heatmap and reset the ticks so the
-  // same session can be completed again tomorrow.
-  const toggleExerciseDone = useCallback((workoutId: string, slug: string) => {
-    setState((s) => {
-      const workout = s.workouts.find((w) => w.id === workoutId);
-      if (!workout) return s;
+  // session counts as done: log today on the heatmap, save to workoutHistory,
+  // and reset the ticks so the same session can be completed again tomorrow.
+  const toggleExerciseDone = useCallback(
+    (workoutId: string, slug: string) => {
+      setState((s) => {
+        const workout = s.workouts.find((w) => w.id === workoutId);
+        if (!workout) return s;
 
-      const current = s.progress[workoutId] ?? [];
-      const checked = current.includes(slug)
-        ? current.filter((x) => x !== slug)
-        : [...current, slug];
+        const current = s.progress[workoutId] ?? [];
+        const checked = current.includes(slug)
+          ? current.filter((x) => x !== slug)
+          : [...current, slug];
 
-      const allSlugs = workout.exercises.map((e) => e.slug);
-      const complete =
-        allSlugs.length > 0 && allSlugs.every((sl) => checked.includes(sl));
+        const allSlugs = workout.exercises.map((e) => e.slug);
+        const complete =
+          allSlugs.length > 0 && allSlugs.every((sl) => checked.includes(sl));
 
-      if (complete) {
+        if (complete) {
+          const key = todayKey();
+          const todays = s.sessionLog[key] ?? [];
+          // Already logged this session today — just clear the ticks, don't
+          // double-count on the heatmap.
+          if (todays.includes(workoutId)) {
+            return { ...s, progress: { ...s.progress, [workoutId]: [] } };
+          }
+          // Save a snapshot of the completed session to workoutHistory.
+          const session: CompletedSession = {
+            id: newId(),
+            workoutId,
+            workoutName: workout.name,
+            exercises: [...workout.exercises],
+            completedAt: new Date().toISOString(),
+          };
+          const existingHistory = s.workoutHistory[key] ?? [];
+          return {
+            ...s,
+            progress: { ...s.progress, [workoutId]: [] },
+            sessionLog: { ...s.sessionLog, [key]: [...todays, workoutId] },
+            completions: {
+              ...s.completions,
+              [key]: (s.completions[key] ?? 0) + 1,
+            },
+            workoutHistory: {
+              ...s.workoutHistory,
+              [key]: [...existingHistory, session],
+            },
+          };
+        }
+
+        return { ...s, progress: { ...s.progress, [workoutId]: checked } };
+      });
+    },
+    []
+  );
+
+  const isSessionCompletedToday = useCallback(
+    (workoutId: string) =>
+      (state.sessionLog[todayKey()] ?? []).includes(workoutId),
+    [state.sessionLog]
+  );
+
+  // Toggle a whole session's completion for today. Marking it done logs one
+  // session on the heatmap, saves to workoutHistory, and clears any in-progress
+  // ticks; unmarking removes today's log and history for that session. Two
+  // different sessions in one day both count.
+  const toggleSessionComplete = useCallback(
+    (workoutId: string) => {
+      setState((s) => {
         const key = todayKey();
         const todays = s.sessionLog[key] ?? [];
-        // Already logged this session today — just clear the ticks, don't
-        // double-count on the heatmap.
-        if (todays.includes(workoutId)) {
-          return { ...s, progress: { ...s.progress, [workoutId]: [] } };
+        const already = todays.includes(workoutId);
+        const workout = s.workouts.find((w) => w.id === workoutId);
+
+        if (already) {
+          // --- Undo completion ---
+          const nextList = todays.filter((id) => id !== workoutId);
+          const sessionLog = { ...s.sessionLog };
+          if (nextList.length) sessionLog[key] = nextList;
+          else delete sessionLog[key];
+
+          const completions = { ...s.completions };
+          const next = (completions[key] ?? 0) - 1;
+          if (next > 0) completions[key] = next;
+          else delete completions[key];
+
+          // Remove the most recent history entry for this workout on this day.
+          const existingHistory = s.workoutHistory[key] ?? [];
+          let removeIdx = -1;
+          for (let i = existingHistory.length - 1; i >= 0; i--) {
+            if (existingHistory[i].workoutId === workoutId) {
+              removeIdx = i;
+              break;
+            }
+          }
+          const updatedHistory =
+            removeIdx >= 0
+              ? [
+                  ...existingHistory.slice(0, removeIdx),
+                  ...existingHistory.slice(removeIdx + 1),
+                ]
+              : existingHistory;
+          const workoutHistory = { ...s.workoutHistory };
+          if (updatedHistory.length) workoutHistory[key] = updatedHistory;
+          else delete workoutHistory[key];
+
+          return { ...s, sessionLog, completions, workoutHistory };
         }
+
+        // --- Complete session ---
+        const session: CompletedSession = {
+          id: newId(),
+          workoutId,
+          workoutName: workout?.name ?? "Workout",
+          exercises: workout ? [...workout.exercises] : [],
+          completedAt: new Date().toISOString(),
+        };
+        const existingHistory = s.workoutHistory[key] ?? [];
+
         return {
           ...s,
           progress: { ...s.progress, [workoutId]: [] },
@@ -254,53 +381,94 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
             ...s.completions,
             [key]: (s.completions[key] ?? 0) + 1,
           },
+          workoutHistory: {
+            ...s.workoutHistory,
+            [key]: [...existingHistory, session],
+          },
         };
-      }
-
-      return { ...s, progress: { ...s.progress, [workoutId]: checked } };
-    });
-  }, []);
-
-  const isSessionCompletedToday = useCallback(
-    (workoutId: string) =>
-      (state.sessionLog[todayKey()] ?? []).includes(workoutId),
-    [state.sessionLog],
+      });
+    },
+    []
   );
 
-  // Toggle a whole session's completion for today. Marking it done logs one
-  // session on the heatmap and clears any in-progress ticks; unmarking removes
-  // today's log for that session. Two different sessions in one day both count.
-  const toggleSessionComplete = useCallback((workoutId: string) => {
-    setState((s) => {
-      const key = todayKey();
-      const todays = s.sessionLog[key] ?? [];
-      const already = todays.includes(workoutId);
+  const getHistoryForDate = useCallback(
+    (dateKey: string): CompletedSession[] =>
+      state.workoutHistory[dateKey] ?? [],
+    [state.workoutHistory]
+  );
 
-      if (already) {
-        const nextList = todays.filter((id) => id !== workoutId);
-        const sessionLog = { ...s.sessionLog };
-        if (nextList.length) sessionLog[key] = nextList;
-        else delete sessionLog[key];
+  // ─── Quick Notes for Exercises ──────────────────────────────────────────
 
-        const completions = { ...s.completions };
-        const next = (completions[key] ?? 0) - 1;
-        if (next > 0) completions[key] = next;
-        else delete completions[key];
+  const getNote = useCallback(
+    (slug: string): string => (state.notes && state.notes[slug]) || "",
+    [state.notes]
+  );
 
-        return { ...s, sessionLog, completions };
+  const hasNote = useCallback(
+    (slug: string): boolean =>
+      Boolean(state.notes && state.notes[slug]?.trim()),
+    [state.notes]
+  );
+
+  const setNote = useCallback(
+    (slug: string, noteText: string): boolean => {
+      try {
+        const trimmed = noteText.trim();
+        const updatedNotes = { ...(state.notes || {}) };
+        if (!trimmed) {
+          delete updatedNotes[slug];
+        } else {
+          updatedNotes[slug] = noteText;
+        }
+
+        // Test and persist immediately so any QuotaExceededError is caught
+        if (typeof window !== "undefined") {
+          const nextState = { ...state, notes: updatedNotes };
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+        }
+
+        setState((s) => {
+          const next = { ...(s.notes || {}) };
+          if (!trimmed) {
+            delete next[slug];
+          } else {
+            next[slug] = noteText;
+          }
+          return { ...s, notes: next };
+        });
+        return true;
+      } catch (err) {
+        console.error("Failed to save personal note:", err);
+        return false;
       }
+    },
+    [state]
+  );
 
-      return {
-        ...s,
-        progress: { ...s.progress, [workoutId]: [] },
-        sessionLog: { ...s.sessionLog, [key]: [...todays, workoutId] },
-        completions: {
-          ...s.completions,
-          [key]: (s.completions[key] ?? 0) + 1,
-        },
-      };
-    });
-  }, []);
+  const clearNote = useCallback(
+    (slug: string): boolean => {
+      try {
+        if (typeof window !== "undefined") {
+          const updatedNotes = { ...(state.notes || {}) };
+          delete updatedNotes[slug];
+          const nextState = { ...state, notes: updatedNotes };
+          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+        }
+
+        setState((s) => {
+          if (!s.notes || !s.notes[slug]) return s;
+          const next = { ...s.notes };
+          delete next[slug];
+          return { ...s, notes: next };
+        });
+        return true;
+      } catch (err) {
+        console.error("Failed to clear personal note:", err);
+        return false;
+      }
+    },
+    [state]
+  );
 
   const value = useMemo<LibraryContextValue>(
     () => ({
@@ -319,6 +487,11 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       doneCount,
       isSessionCompletedToday,
       toggleSessionComplete,
+      getHistoryForDate,
+      getNote,
+      hasNote,
+      setNote,
+      clearNote,
     }),
     [
       state,
@@ -336,7 +509,12 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       doneCount,
       isSessionCompletedToday,
       toggleSessionComplete,
-    ],
+      getHistoryForDate,
+      getNote,
+      hasNote,
+      setNote,
+      clearNote,
+    ]
   );
 
   return (

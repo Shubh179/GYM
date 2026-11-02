@@ -1,0 +1,11 @@
+const {chromium}=require('playwright-core');const fs=require('node:fs/promises');const assert=require('node:assert/strict');
+(async()=>{const directory='artifacts/page-width';await fs.mkdir(directory,{recursive:true});const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});const results=[];try{
+ const context=await browser.newContext({reducedMotion:'reduce'});const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ const data=await(await fetch('http://localhost:3000/api/exercises')).json();const slug=data.results[0].slug;
+ for(const width of [320,768,1440,1920]){await page.setViewportSize({width,height:900});for(const route of ['/library','/search','/favourites','/timer','/spotify','/exercise/'+slug]){
+  await page.goto('http://localhost:3000'+route,{waitUntil:'networkidle',timeout:60000});await page.locator('main > .page-shell').waitFor();
+  const result=await page.locator('main > .page-shell').evaluate(element=>{const rect=element.getBoundingClientRect(),style=getComputedStyle(element);return {width:rect.width,left:rect.left,padding:parseFloat(style.paddingLeft),documentWidth:document.documentElement.scrollWidth,clientWidth:document.documentElement.clientWidth,bodyWidth:document.body.getBoundingClientRect().width,cards:[...element.querySelectorAll('[data-exercise-card]')].map(card=>card.getBoundingClientRect().height)};});
+  assert.ok(Math.abs(result.width-Math.min(result.bodyWidth,1600))<1,route+' has an unexpected content cap');assert.equal(result.padding,width<640?16:width<1024?24:width<1280?40:48);assert.ok(result.documentWidth<=width+1,route+' overflows');if(result.cards.length)assert.ok(Math.max(...result.cards)-Math.min(...result.cards)<1,'Grid heights changed');
+  if(width===1440&&route==='/library'||width===1920&&route==='/search')await page.screenshot({path:`${directory}/${route.slice(1)}-${width}.png`,fullPage:route==='/library',animations:'disabled'});
+  results.push({route,viewport:width,...result});console.log('PASS page width',route,width,'side padding='+result.padding);
+ }}assert.equal(errors.length,0);await fs.writeFile(directory+'/report.json',JSON.stringify({results,runtimeErrors:errors},null,2));}finally{await browser.close();}})().catch(error=>{console.error(error);process.exitCode=1});

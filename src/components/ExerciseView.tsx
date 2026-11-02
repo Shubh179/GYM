@@ -3,13 +3,14 @@ import MuscleMap from "./MuscleMap";
 import TechniqueSteps from "./TechniqueSteps";
 import DeepDiveVideo from "./DeepDiveVideo";
 import ExerciseActions from "./ExerciseActions";
+import QuickNotes from "./QuickNotes";
 import type { AnyExercise, GeneratedExercise } from "@/lib/types";
 
 function Meta({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
     <div className="rounded-xl border border-white/10 bg-ink-850 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/50">
         {label}
       </p>
       <p className="mt-0.5 font-medium capitalize text-white">{value}</p>
@@ -29,14 +30,15 @@ export default function ExerciseView({
   const pose = gen?.svgPose ?? null;
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-8 sm:py-12">
+    <div className="page-shell py-8 sm:py-12">
       <div className="mb-8">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-black tracking-tight text-white sm:text-4xl">
             {exercise.name}
           </h1>
+          {exercise.source === "custom" && <span className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent">Custom exercise</span>}
           {isAI && (
-            <span className="rounded-full border border-lime/40 bg-lime/10 px-3 py-1 text-xs font-semibold text-lime">
+            <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
               AI generated
             </span>
           )}
@@ -63,16 +65,16 @@ export default function ExerciseView({
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">
-          <MovementViewer
+          {exercise.source !== "custom" && <MovementViewer
             imageUrls={exercise.imageUrls}
             pose={pose}
             name={exercise.name}
-          />
+          />}
 
           {gen && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-ink-850 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-lime">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent">
                   Start position
                 </p>
                 <p className="text-sm leading-relaxed text-white/75">
@@ -80,7 +82,7 @@ export default function ExerciseView({
                 </p>
               </div>
               <div className="rounded-2xl border border-white/10 bg-ink-850 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-lime">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent">
                   Finish position
                 </p>
                 <p className="text-sm leading-relaxed text-white/75">
@@ -103,14 +105,20 @@ export default function ExerciseView({
         </div>
 
         <div className="space-y-6">
-          <MuscleMap
+          {/* Personal Quick Notes */}
+          <QuickNotes
+            exerciseSlug={exercise.slug}
+            exerciseName={exercise.name}
+          />
+
+          {exercise.primaryMuscles.length > 0 && <MuscleMap
             primary={exercise.primaryMuscles}
             secondary={exercise.secondaryMuscles}
-          />
-          <TechniqueSteps
+          />}
+          {exercise.instructions.length > 0 && <TechniqueSteps
             steps={exercise.instructions}
             tips={gen?.tips}
-          />
+          />}
         </div>
       </div>
     </div>

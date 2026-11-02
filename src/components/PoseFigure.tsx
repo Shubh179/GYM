@@ -65,18 +65,18 @@ export default function PoseFigure({ pose, t }: { pose: SvgPose; t: number }) {
           y1={frame[a][1]}
           x2={frame[b][0]}
           y2={frame[b][1]}
-          stroke="#c6ff2e"
+          stroke="#f49b62"
           strokeWidth="2.4"
           strokeLinecap="round"
         />
       ))}
 
       {/* head */}
-      <circle cx={frame.head[0]} cy={frame.head[1]} r="5" fill="#c6ff2e" />
+      <circle cx={frame.head[0]} cy={frame.head[1]} r="5" fill="#f49b62" />
 
       {/* joints */}
       {JOINTS.map((j) => (
-        <circle key={j} cx={frame[j][0]} cy={frame[j][1]} r="1.6" fill="#07070a" stroke="#c6ff2e" strokeWidth="0.8" />
+        <circle key={j} cx={frame[j][0]} cy={frame[j][1]} r="1.6" fill="#111315" stroke="#f49b62" strokeWidth="0.8" />
       ))}
     </svg>
   );

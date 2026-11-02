@@ -1,3 +1,4 @@
+import { readCustomExercises } from "./custom-exercises";
 import Fuse from "fuse.js";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -39,9 +40,6 @@ function normalize(raw: RawExercise): Exercise {
 
 // Module-level caches (persist across requests within a server instance).
 let exercisesCache: Exercise[] | null = null;
-let bySlugCache: Map<string, Exercise> | null = null;
-let fuseCache: Fuse<Exercise> | null = null;
-
 async function loadRaw(): Promise<Exercise[]> {
   const file = path.join(process.cwd(), "data", "exercises.json");
   const text = await readFile(file, "utf8");
@@ -51,23 +49,16 @@ async function loadRaw(): Promise<Exercise[]> {
 }
 
 export async function getAllExercises(): Promise<Exercise[]> {
-  if (exercisesCache) return exercisesCache;
-  exercisesCache = await loadRaw();
-  return exercisesCache;
+  if (!exercisesCache) exercisesCache = await loadRaw();
+  return [...await readCustomExercises(), ...exercisesCache];
 }
 
 export async function getBySlug(slug: string): Promise<Exercise | null> {
-  if (!bySlugCache) {
-    const all = await getAllExercises();
-    bySlugCache = new Map(all.map((e) => [e.slug, e]));
-  }
-  return bySlugCache.get(slug) ?? null;
+  return (await getAllExercises()).find((exercise) => exercise.slug === slug) ?? null;
 }
 
 async function getFuse(): Promise<Fuse<Exercise>> {
-  if (fuseCache) return fuseCache;
-  const all = await getAllExercises();
-  fuseCache = new Fuse(all, {
+  return new Fuse(await getAllExercises(), {
     keys: [
       { name: "name", weight: 0.6 },
       { name: "primaryMuscles", weight: 0.2 },
@@ -78,7 +69,6 @@ async function getFuse(): Promise<Fuse<Exercise>> {
     ignoreLocation: true,
     minMatchCharLength: 2,
   });
-  return fuseCache;
 }
 
 function toSearchResult(e: Exercise): SearchResult {
