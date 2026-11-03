@@ -9,7 +9,7 @@ const links = [
   { href: "/search", label: "Browse", icon: "M21 21l-5-5M18 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0" },
   { href: "/favourites", label: "Favourites", icon: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8" },
   { href: "/timer", label: "Timer", icon: "M9 2h6M12 8v5l3 2M20 13a8 8 0 1 1-16 0 8 8 0 0 1 16 0" },
-  { href: "/spotify", label: "Spotify", icon: "M9 18V5l12-2v13M9 18a3 3 0 1 1-3-3h3M21 16a3 3 0 1 1-3-3h3" },
+  { href: "/music", label: "Music", icon: "M9 18V5l12-2v13M9 18a3 3 0 1 1-3-3h3M21 16a3 3 0 1 1-3-3h3" },
 ];
 export default function Navbar() {
   const pathname = usePathname();

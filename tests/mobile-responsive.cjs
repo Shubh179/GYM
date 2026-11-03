@@ -28,9 +28,9 @@ async function inspect(page, label) {
     const overlays=[...document.querySelectorAll('aside[aria-label], [role="dialog"]')].map(element=>{
       const r=element.getBoundingClientRect(); return {label:element.getAttribute('aria-label'),top:r.top,bottom:r.bottom,width:r.width,height:r.height,inside:r.top>=0&&r.bottom<=innerHeight+1};
     });
-    const music=overlays.find(item=>item.label==='Spotify player');
+    const music=overlays.find(item=>item.label==='EchoPlay player');
     const timer=overlays.find(item=>item.label==='Active workout timer');
-    const m=document.querySelector('aside[aria-label="Spotify player"]')?.getBoundingClientRect();
+    const m=document.querySelector('aside[aria-label="EchoPlay player"]')?.getBoundingClientRect();
     const t=document.querySelector('aside[aria-label="Active workout timer"]')?.getBoundingClientRect();
     const overlayOverlap=m&&t?Math.max(0,Math.min(m.right,t.right)-Math.max(m.left,t.left))*Math.max(0,Math.min(m.bottom,t.bottom)-Math.max(m.top,t.top)):0;
     return {overlayOverlap,overlays,viewport:{width:innerWidth,height:innerHeight},documentWidth:document.documentElement.scrollWidth,overflowing,nav,controls};
@@ -57,12 +57,12 @@ async function inspect(page, label) {
  const context=await browser.newContext({viewport:sizes[0],isMobile:true,hasTouch:true,reducedMotion:'reduce'});
  await context.addInitScript(({library})=>{if(!localStorage.getItem('responsive-test-seeded')){localStorage.setItem('repvisual:library:v1',JSON.stringify(library));localStorage.setItem('responsive-test-seeded','1');}},{library});
  // External players/images are third-party surfaces: test our containers without depending on network/login.
- await context.route(/https:\/\/(open\.spotify\.com|www\.youtube-nocookie\.com)\//,route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html><body style="margin:0;background:#181818;color:white;font:16px system-ui">Third-party player test frame</body></html>'}));
+ await context.route(/https:\/\/(echoplay\.vercel\.app|www\.youtube-nocookie\.com)\//,route=>route.fulfill({status:200,contentType:'text/html',body:'<!doctype html><html><body style="margin:0;background:#181818;color:white;font:16px system-ui">Third-party player test frame</body></html>'}));
  const page=await context.newPage();
  page.on('pageerror',error=>report.errors.push(error.message));
  for(const size of (process.env.TEST_INTERACTIONS_ONLY ? [] : sizes)){
   await page.setViewportSize(size);
-  for(const route of ['/library','/search','/favourites','/timer','/spotify']){
+  for(const route of ['/library','/search','/favourites','/timer','/music']){
    await page.goto(baseURL+route,{waitUntil:'networkidle',timeout:60000});
    if(route==='/library') { await page.getByRole('heading',{name:'Your sessions'}).waitFor(); await page.getByRole('button',{name:'Expand all workout sessions',exact:true}).click(); }
    if(route==='/favourites')await page.locator('main img').first().waitFor();
@@ -113,18 +113,20 @@ async function inspect(page, label) {
  await page.getByRole('button',{name:'Pause',exact:true}).click();
  await page.getByRole('button',{name:'Resume',exact:true}).waitFor();report.interactions.push('Stopwatch start/pause/resume states work');
  await page.getByRole('button',{name:'Resume',exact:true}).click();
- await page.goto(baseURL+'/spotify',{waitUntil:'networkidle'});
- await page.getByRole('button',{name:'Keep this playlist while I train'}).click();
- await page.getByRole('complementary',{name:'Spotify player'}).waitFor();
+ await page.goto(baseURL+'/music',{waitUntil:'networkidle'});
+ await page.getByRole('complementary',{name:'EchoPlay player'}).waitFor();
+ await page.evaluate(() => window.musicFrame = document.getElementById('echoplay-frame'));
+ await page.getByRole('button',{name:'Minimize',exact:true}).click();
  await page.getByRole('link',{name:'My Training',exact:true}).click();
  await page.getByRole('heading',{name:'Your sessions'}).waitFor();
+ if (!await page.evaluate(() => window.musicFrame === document.getElementById('echoplay-frame'))) throw new Error('Music iframe remounted during navigation');
  await inspect(page,'floating-players');
- const overlaps=await page.evaluate(()=>{const music=document.querySelector('aside[aria-label="Spotify player"]')?.getBoundingClientRect(),timer=document.querySelector('aside[aria-label="Active workout timer"]')?.getBoundingClientRect();return music&&timer?Math.max(0,Math.min(music.right,timer.right)-Math.max(music.left,timer.left))*Math.max(0,Math.min(music.bottom,timer.bottom)-Math.max(music.top,timer.top)):0;});
+ const overlaps=await page.evaluate(()=>{const music=document.querySelector('aside[aria-label="EchoPlay player"]')?.getBoundingClientRect(),timer=document.querySelector('aside[aria-label="Active workout timer"]')?.getBoundingClientRect();return music&&timer?Math.max(0,Math.min(music.right,timer.right)-Math.max(music.left,timer.left))*Math.max(0,Math.min(music.bottom,timer.bottom)-Math.max(music.top,timer.top)):0;});
  report.interactions.push({name:'Floating music and timer overlap area',pixels:overlaps});
  if(overlaps>0)report.errors.push(`Floating players overlap by ${overlaps}px squared`);
  await page.getByRole('button',{name:'Expand',exact:true}).click();
  await page.waitForFunction(() => {
-   const music = document.querySelector('aside[aria-label="Spotify player"]')?.getBoundingClientRect();
+   const music = document.querySelector('aside[aria-label="EchoPlay player"]')?.getBoundingClientRect();
    const timer = document.querySelector('aside[aria-label="Active workout timer"]')?.getBoundingClientRect();
    return music && timer && timer.bottom <= music.top;
  });
@@ -134,7 +136,7 @@ async function inspect(page, label) {
  await page.setViewportSize({width:568,height:320});
  await inspect(page,'spotify-short-landscape');
  await page.setViewportSize({width:320,height:568});
- await page.getByRole('button',{name:'Close Spotify player and stop playback'}).click();
+ await page.getByRole('button',{name:'Close EchoPlay player and stop playback'}).click();
  await page.goto(baseURL+'/exercise/'+exercises[0].slug,{waitUntil:'networkidle',timeout:60000});
  await inspect(page,'exercise-detail');
  await page.getByRole('button',{name:'Add to workout',exact:true}).click();await inspect(page,'workout-menu');report.interactions.push('Exercise detail and workout dropdown opened');

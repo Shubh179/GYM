@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { SpotifyProvider } from "@/components/SpotifyProvider";
+import { MusicProvider } from "@/components/MusicProvider";
 import Navbar from "@/components/Navbar";
 import FloatingTimer from "@/components/FloatingTimer";
 import { LibraryProvider } from "@/lib/library";
@@ -29,7 +29,7 @@ export default function RootLayout({
       <body className="min-h-screen font-sans antialiased">
         <LibraryProvider>
           <TimerProvider>
-            <SpotifyProvider>
+            <MusicProvider>
             <Navbar />
             <main>{children}</main>
             <FloatingTimer />
@@ -37,7 +37,7 @@ export default function RootLayout({
               <span className="font-semibold tracking-tight text-white/60">RepVisual</span>
               <span>Exercise data: free-exercise-db (MIT).</span>
             </footer>
-            </SpotifyProvider>
+            </MusicProvider>
           </TimerProvider>
         </LibraryProvider>
       </body>

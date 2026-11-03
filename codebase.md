@@ -1891,3 +1891,8 @@ Removed decorative taglines, eyebrow text, repeated instructions, and long intro
 - Unit checks in `tests/supabase-storage.cjs` use fake clients to verify public reads, pagination, fallback, duplicate responses, verified-admin inserts, and rejection of anonymous, wrong-account, unconfirmed, and unconfigured writes.
 
 Supabase validation: the live table is readable and the existing local exercise was imported once without overwrites. The production build and TypeScript checks pass. Server/storage unit tests cover authorization and persistence paths. Mocked browser auth tests pass at 320px, 390px, and 1280px without sending real passwords or test records to Supabase. Browser bundle scanning confirms the server secret is absent while public settings are present. Admin email configuration is present locally; a matching confirmed Supabase Auth user still needs to be created before a real admin sign-in can succeed.
+
+
+## EchoPlay Music replacement
+
+The Music navigation tab now opens `/music`; `/spotify` redirects there. `MusicProvider` mounts a single EchoPlay iframe automatically when the Music page loads. It persists across client navigation. Minimize hides the iframe without unloading playback; Close unmounts it. The expanded player is responsive, and the floating timer measures its height to avoid overlap. EchoPlay manages search, songs, playlists and playback; no full-song playback guarantee is made by RepVisual. An external link is available if framing or playback fails. Previous Spotify localStorage data is left intact but is no longer used.
