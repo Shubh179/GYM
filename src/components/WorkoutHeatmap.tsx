@@ -7,7 +7,7 @@ import { useLibrary } from "@/lib/library";
 // A GitHub/LeetCode-style contribution grid of completed workout sessions.
 // Each cell is one day; colour intensity reflects how many sessions were
 // completed that day. Data comes from the library store's `completions` map,
-// which only grows when every exercise in a workout session is checked off.
+// which includes sessions finished with only some exercises checked off.
 
 const WEEKS = 53;
 const WEEKDAYS = ["", "Mon", "", "Wed", "", "Fri", ""];
@@ -269,7 +269,7 @@ export default function WorkoutHeatmap() {
                           <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M5 13l4 4L19 7" />
                           </svg>
-                          Completed
+                          {session.exercises.length} exercises recorded
                         </span>
                       </div>
 

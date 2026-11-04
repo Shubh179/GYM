@@ -360,15 +360,23 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           if (updatedHistory.length) workoutHistory[key] = updatedHistory;
           else delete workoutHistory[key];
 
-          return { ...s, sessionLog, completions, workoutHistory };
+          const restored = removeIdx >= 0
+            ? existingHistory[removeIdx].exercises.map((ex) => ex.slug)
+            : [];
+          return { ...s, sessionLog, completions, workoutHistory,
+            progress: { ...s.progress, [workoutId]: restored } };
         }
 
         // --- Complete session ---
+        if (!workout) return s;
+        const checked = s.progress[workoutId] ?? [];
+        const performed = workout.exercises.filter((ex) => checked.includes(ex.slug));
+        if (performed.length === 0) return s;
         const session: CompletedSession = {
           id: newId(),
           workoutId,
           workoutName: workout?.name ?? "Workout",
-          exercises: workout ? [...workout.exercises] : [],
+          exercises: performed,
           completedAt: new Date().toISOString(),
         };
         const existingHistory = s.workoutHistory[key] ?? [];

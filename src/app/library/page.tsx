@@ -10,6 +10,7 @@ import InlineExercisePicker from "@/components/InlineExercisePicker";
 import QuickNotes from "@/components/QuickNotes";
 import {
   useLibrary,
+  dateToKey,
   type Workout,
   type SavedExercise,
 } from "@/lib/library";
@@ -34,6 +35,7 @@ function WorkoutBlock({
     toggleSessionComplete,
     getNote,
     hasNote,
+    getHistoryForDate,
   } = useLibrary();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(workout.name);
@@ -55,6 +57,10 @@ function WorkoutBlock({
   const total = workout.exercises.length;
   const done = doneCount(workout.id);
   const sessionDone = isSessionCompletedToday(workout.id);
+  const recordedSession = getHistoryForDate(dateToKey()).find(
+    (session) => session.workoutId === workout.id
+  );
+  const completedCount = sessionDone ? (recordedSession?.exercises.length ?? 0) : done;
 
   return (
     <div className="rounded-xl border border-white/10 bg-ink-850 p-4 transition sm:p-6">
@@ -121,7 +127,7 @@ function WorkoutBlock({
                       : "border border-white/10 bg-white/5 text-white/60"
                   }`}
                 >
-                  {sessionDone ? "Completed today" : `${done}/${total} done`}
+                  {sessionDone ? `${completedCount}/${total} done today` : `${done}/${total} done`}
                 </span>
               )}
             </div>
@@ -156,13 +162,15 @@ function WorkoutBlock({
           {total > 0 && (
             <button
               onClick={() => toggleSessionComplete(workout.id)}
+              disabled={!sessionDone && done === 0}
+              title={!sessionDone && done === 0 ? "Check the exercises you performed first" : undefined}
               aria-pressed={sessionDone}
               aria-label={
                 sessionDone
                   ? `Mark ${workout.name} session as not complete`
                   : `Mark ${workout.name} session as complete`
               }
-              className={`flex items-center gap-2 min-h-11 rounded-lg border px-3 py-2.5 font-semibold transition ${
+              className={`flex items-center gap-2 min-h-11 rounded-lg border px-3 py-2.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
                 sessionDone
                   ? "border-accent bg-accent text-ink-950"
                   : "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20"
@@ -242,12 +250,12 @@ function WorkoutBlock({
                   <div
                     className="h-full rounded-full bg-accent transition-all"
                     style={{
-                      width: `${sessionDone ? 100 : (done / total) * 100}%`,
+                      width: `${(completedCount / total) * 100}%`,
                     }}
                   />
                 </div>
                 <span className="shrink-0 text-xs font-medium text-white/50">
-                  {sessionDone ? `${total}/${total}` : `${done}/${total}`} done
+                  {completedCount}/{total} done
                 </span>
               </div>
             )}
@@ -294,7 +302,9 @@ function WorkoutBlock({
             ) : (
               <div className="grid grid-cols-1 gap-4 min-[380px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
                 {workout.exercises.map((ex, i) => {
-                  const checked = isExerciseDone(workout.id, ex.slug) || sessionDone;
+                  const checked = sessionDone
+                    ? Boolean(recordedSession?.exercises.some((saved) => saved.slug === ex.slug))
+                    : isExerciseDone(workout.id, ex.slug);
                   return (
                     <div key={ex.slug} data-workout-exercise className="flex h-full min-w-0 flex-col gap-2">
                       <div className="relative">
@@ -351,6 +361,8 @@ function WorkoutBlock({
 
                       <button
                         onClick={() => toggleExerciseDone(workout.id, ex.slug)}
+                        disabled={sessionDone}
+                        title={sessionDone ? "Undo session completion to edit recorded exercises" : undefined}
                         aria-label={
                           checked
                             ? `Mark ${ex.name} as not done`
