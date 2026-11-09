@@ -19,7 +19,6 @@ export default function FloatingTimer() {
     restTimer,
     restTimerRemainingMs,
     pauseRestTimer,
-    resumeRestTimer,
     addRestTime,
     dismissRestFinished,
     stopwatch,

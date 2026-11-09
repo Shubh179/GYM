@@ -16,8 +16,6 @@
     "db:import-exercises": "node scripts/import-custom-exercises.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.70.0",
-    "@google/genai": "^2.28.0",
     "@supabase/supabase-js": "2.118.0",
     "framer-motion": "11.18.2",
     "fuse.js": "7.1.0",
@@ -25,8 +23,7 @@
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "server-only": "0.0.1",
-    "three": "^0.187.0",
-    "zod": "^4.6.5"
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/node": "20.19.9",

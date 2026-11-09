@@ -22,8 +22,6 @@ const nextConfig = {
       "/exercise/[slug]": ["./data/**"],
       "/api/exercises": ["./data/**"],
       "/api/exercise/[slug]": ["./data/**"],
-      "/api/generate": ["./data/**"],
-      "/api/generate-video": ["./data/**"],
     },
   },
 };

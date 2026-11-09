@@ -8,7 +8,6 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "..", "data");
 const OUT_FILE = path.join(DATA_DIR, "exercises.json");
-const GENERATED_DIR = path.join(DATA_DIR, "generated");
 
 const SOURCE =
   "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json";
@@ -24,7 +23,6 @@ async function main() {
     return;
   }
   if (!existsSync(DATA_DIR)) await mkdir(DATA_DIR, { recursive: true });
-  if (!existsSync(GENERATED_DIR)) await mkdir(GENERATED_DIR, { recursive: true });
 
   console.log(`Fetching dataset from ${SOURCE} ...`);
   const res = await fetch(SOURCE);

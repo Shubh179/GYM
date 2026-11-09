@@ -1,9 +1,8 @@
 import { getBySlug } from "@/lib/exercises";
-import { readCached } from "@/lib/cache";
+import { notFound } from "next/navigation";
 import { resolveExerciseVideo } from "@/lib/youtube";
 import { watchEmbedUrl, searchEmbedUrl } from "@/lib/youtube-embed";
 import ExerciseView from "@/components/ExerciseView";
-import GenerateFlow from "@/components/GenerateFlow";
 
 export const dynamic = "force-dynamic";
 
@@ -14,33 +13,12 @@ export default async function ExercisePage({
 }) {
   const { slug } = params;
 
-  // 1. Dataset hit — render instantly on the server.
-  const dataset = await getBySlug(slug);
-  if (dataset) {
-    if (dataset.source === "custom" && dataset.youtubeVideoId) {
-      return <ExerciseView exercise={dataset} embedUrl={watchEmbedUrl(dataset.youtubeVideoId)} />;
-    }
-    const context = dataset.primaryMuscles[0] ?? dataset.category;
-    const embedUrl =
-      (await resolveExerciseVideo({ slug, name: dataset.name, context })) ??
-      searchEmbedUrl(dataset.name, context);
-    return <ExerciseView exercise={dataset} embedUrl={embedUrl} />;
+  const exercise = await getBySlug(slug);
+  if (!exercise) notFound();
+  if (exercise.source === "custom" && exercise.youtubeVideoId) {
+    return <ExerciseView exercise={exercise} embedUrl={watchEmbedUrl(exercise.youtubeVideoId)} />;
   }
-
-  // 2. Previously generated and cached — render instantly on the server.
-  const cached = await readCached(slug);
-  if (cached) {
-    const context = cached.primaryMuscles[0] ?? cached.category;
-    const embedUrl =
-      (await resolveExerciseVideo({ slug, name: cached.name, context })) ??
-      searchEmbedUrl(cached.name, context);
-    return <ExerciseView exercise={cached} embedUrl={embedUrl} />;
-  }
-
-  // 3. Not found anywhere — hand off to the client AI generation flow.
-  const readableName = slug
-    .replace(/-/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-
-  return <GenerateFlow slug={slug} readableName={readableName} />;
+  const context = exercise.primaryMuscles[0] ?? exercise.category;
+  const embedUrl = (await resolveExerciseVideo({ slug, name: exercise.name, context })) ?? searchEmbedUrl(exercise.name, context);
+  return <ExerciseView exercise={exercise} embedUrl={embedUrl} />;
 }

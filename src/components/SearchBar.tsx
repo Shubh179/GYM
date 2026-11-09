@@ -128,7 +128,7 @@ export default function SearchBar({ autoFocus, size = "lg", initialQuery = "" }:
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={r.thumbUrl} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-accent">AI</span>
+                  <svg className="h-5 w-5 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M6 5v14M3 8v8M18 5v14M21 8v8M6 12h12" /></svg>
                 )}
               </span>
               <span className="min-w-0 flex-1">

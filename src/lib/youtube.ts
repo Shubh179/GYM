@@ -18,10 +18,6 @@ const VIDEOS_DIR = path.join(process.cwd(), "data", "videos");
 // which persists for the life of a warm Lambda. Reads check both locations.
 const TMP_VIDEOS_DIR = path.join(os.tmpdir(), "repvisual-videos");
 
-export function hasYouTubeKey(): boolean {
-  return Boolean(process.env.YOUTUBE_API_KEY);
-}
-
 interface CachedVideo {
   slug: string;
   videoId: string;

@@ -11,7 +11,6 @@ interface Props {
     focusedTarget: string | null;
     view: BodyView;
     viewRequest: number;
-    pulsing: boolean;
     onSelect: (id: string) => void;
     onActivate: (id: string) => void;
     enabled?: boolean;
@@ -91,13 +90,12 @@ export default function MuscleBody3D(props: Props) {
         floor.rotation.x=-Math.PI/2;floor.position.y=-2.305;floor.receiveShadow=true;scene.add(floor);
         const stage = new THREE.Mesh(new THREE.RingGeometry(.76,.77,96),new THREE.MeshBasicMaterial({color:"#8ca6c6",transparent:true,opacity:.12,side:THREE.DoubleSide}));
         stage.rotation.x=-Math.PI/2;stage.position.y=-2.31;scene.add(stage);
-        let active = true, visible = true, frame = 0, lastView = "", lastGroup = "", lastRequest = -1;
+        let active = true, visible = true, lastView = "", lastGroup = "", lastRequest = -1;
         const render = () => {
             if (!active || !visible || live.current.enabled === false || document.hidden)
                 return;
             const current = live.current;
             const colors = new Map(current.group.regions.map(region => [region.id, region.color]));
-            const pulse = current.pulsing && !window.matchMedia("(prefers-reduced-motion: reduce)").matches ? .17 + .12 * Math.sin(performance.now() * .003) : .12;
             for (const { mesh, target } of muscles) {
                 const color = colors.get(target);
                 const shown = Boolean(color) && current.activeTargets.includes(target);
@@ -107,7 +105,7 @@ export default function MuscleBody3D(props: Props) {
                 if (current.focusedTarget && !focused)
                     mesh.material.color.multiplyScalar(.65);
                 mesh.material.emissive.set(shown ? "#b81730" : "#000000");
-                mesh.material.emissiveIntensity = shown ? (focused ? .22 : pulse*.6) : 0;
+                mesh.material.emissiveIntensity = shown ? (focused ? .22 : .072) : 0;
             }
             scene.updateMatrixWorld();
             camera.updateMatrixWorld();
@@ -169,7 +167,7 @@ export default function MuscleBody3D(props: Props) {
             lastGroup = current.group.id;
             lastRequest = current.viewRequest;
         } render(); };
-        // Rendering is event-driven; only the optional highlight pulse needs a frame loop.
+        // Render only when the view, selection or layout changes.
         const resize = () => { const width = host.clientWidth, height = host.clientHeight; if (!width || !height)
             return; renderer.setSize(width, height); camera.aspect = width / height; camera.updateProjectionMatrix(); setView(); };
         const observer = new ResizeObserver(resize);
@@ -208,26 +206,17 @@ export default function MuscleBody3D(props: Props) {
         renderer.domElement.addEventListener("pointermove", pointerMove);
         renderer.domElement.addEventListener("webglcontextlost", contextLost);
         controls.addEventListener("change", render);
-        const canAnimate = () => live.current.enabled !== false && live.current.pulsing && visible && !document.hidden && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const tick = () => { frame = 0; if (!active || !canAnimate())
-            return; render(); frame = requestAnimationFrame(tick); };
-        const sync = () => { setView(); if (canAnimate() && !frame)
-            frame = requestAnimationFrame(tick);
-        else if (!canAnimate() && frame) {
-            cancelAnimationFrame(frame);
-            frame = 0;
-        } };
-        update.current = sync;
-        document.addEventListener("visibilitychange", sync);
+        update.current = setView;
+        document.addEventListener("visibilitychange", setView);
         resize();
         modelReady.then(() => { if (active) { renderer.shadowMap.needsUpdate = !mobile; resize();setReady(true); } }).catch(() => { if (active) setUnavailable(true); });
-        return () => { active = false; loadController.abort();environment.dispose();key.shadow.dispose(); cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); controls.dispose(); document.removeEventListener("visibilitychange", sync); update.current = null; renderer.domElement.removeEventListener("pointerdown", pointerDown); renderer.domElement.removeEventListener("pointerup", pointerUp); renderer.domElement.removeEventListener("pointercancel", pointerCancel); renderer.domElement.removeEventListener("pointermove", pointerMove); renderer.domElement.removeEventListener("webglcontextlost", contextLost); const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(); scene.traverse(object => { if (object instanceof THREE.Mesh) {
+        return () => { active = false; loadController.abort();environment.dispose();key.shadow.dispose(); observer.disconnect(); intersection.disconnect(); controls.dispose(); document.removeEventListener("visibilitychange", setView); update.current = null; renderer.domElement.removeEventListener("pointerdown", pointerDown); renderer.domElement.removeEventListener("pointerup", pointerUp); renderer.domElement.removeEventListener("pointercancel", pointerCancel); renderer.domElement.removeEventListener("pointermove", pointerMove); renderer.domElement.removeEventListener("webglcontextlost", contextLost); const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(); scene.traverse(object => { if (object instanceof THREE.Mesh) {
             if (!object.userData.sharedAnatomyGeometry) geometries.add(object.geometry);
             for (const material of Array.isArray(object.material) ? object.material : [object.material])
                 materials.add(material);
         } }); geometries.forEach(geometry => geometry.dispose()); materials.forEach(material => material.dispose()); renderer.dispose(); renderer.forceContextLoss(); renderer.domElement.remove(); };
     }, []);
-    useEffect(() => { update.current?.(); }, [ready, props.group.id, props.view, props.viewRequest, props.activeTargets, props.focusedTarget, props.pulsing, props.enabled]);
+    useEffect(() => { update.current?.(); }, [ready, props.group.id, props.view, props.viewRequest, props.activeTargets, props.focusedTarget, props.enabled]);
     return <div className="relative overflow-hidden rounded-2xl border border-rose-200/10 bg-[radial-gradient(ellipse_at_50%_45%,#36212b_0%,#171722_48%,#090d15_100%)]">
       <div className="pointer-events-none absolute left-4 top-4 z-10">
         <span className="block text-[10px] font-semibold uppercase tracking-[.2em] text-rose-200/70">Anatomy</span>

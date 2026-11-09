@@ -290,7 +290,7 @@ export default function WorkoutHeatmap() {
                                   />
                                 ) : (
                                   <span className="text-[8px] font-bold text-accent">
-                                    AI
+                                    EX
                                   </span>
                                 )}
                               </span>

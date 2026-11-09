@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
 import AddExerciseForm from "./AddExerciseForm";
 import type { SearchResult } from "@/lib/types";
@@ -249,7 +249,7 @@ export default function InlineExercisePicker({
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-xs font-bold text-accent/40">
-                          AI
+                          EX
                         </div>
                       )}
                     </div>

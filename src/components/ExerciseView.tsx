@@ -7,7 +7,7 @@ import TechniqueSteps from "./TechniqueSteps";
 import DeepDiveVideo from "./DeepDiveVideo";
 import ExerciseActions from "./ExerciseActions";
 import QuickNotes from "./QuickNotes";
-import type { AnyExercise, GeneratedExercise } from "@/lib/types";
+import type { Exercise } from "@/lib/types";
 
 function Meta({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
@@ -25,13 +25,9 @@ export default function ExerciseView({
   exercise,
   embedUrl = null,
 }: {
-  exercise: AnyExercise;
+  exercise: Exercise;
   embedUrl?: string | null;
 }) {
-  const isAI = exercise.source === "ai";
-  const gen = isAI ? (exercise as GeneratedExercise) : null;
-  const pose = gen?.svgPose ?? null;
-
   return (
     <div className="page-shell py-8 sm:py-12">
       <div className="mb-8">
@@ -40,11 +36,6 @@ export default function ExerciseView({
             {exercise.name}
           </h1>
           {exercise.source === "custom" && <span className="rounded-full border border-accent/40 px-3 py-1 text-xs text-accent">Custom exercise</span>}
-          {isAI && (
-            <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-              AI generated
-            </span>
-          )}
         </div>
         <p className="mt-2 capitalize text-white/50">
           {exercise.category}
@@ -83,30 +74,9 @@ export default function ExerciseView({
         <div className="space-y-6">
           {exercise.source !== "custom" && <MovementViewer
             imageUrls={exercise.imageUrls}
-            pose={pose}
             name={exercise.name}
           />}
 
-          {gen && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/10 bg-ink-850 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent">
-                  Start position
-                </p>
-                <p className="text-sm leading-relaxed text-white/75">
-                  {gen.startPositionCue}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-ink-850 p-4">
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-accent">
-                  Finish position
-                </p>
-                <p className="text-sm leading-relaxed text-white/75">
-                  {gen.finishPositionCue}
-                </p>
-              </div>
-            </div>
-          )}
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <Meta label="Mechanic" value={exercise.mechanic} />
@@ -133,7 +103,6 @@ export default function ExerciseView({
           />}
           {exercise.instructions.length > 0 && <TechniqueSteps
             steps={exercise.instructions}
-            tips={gen?.tips}
           />}
         </div>
       </div>

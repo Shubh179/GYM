@@ -2,8 +2,7 @@ import { parseCustomExerciseInput } from "@/lib/custom-exercise-input";
 import { updateCustomExercise } from "@/lib/custom-exercises";
 import { exerciseAccess, ExerciseStorageUnavailableError } from "@/lib/supabase-server";
 import { NextRequest, NextResponse } from "next/server";
-import { getBySlug, searchExercises } from "@/lib/exercises";
-import { readCached } from "@/lib/cache";
+import { getBySlug } from "@/lib/exercises";
 
 export async function GET(
   _req: NextRequest,
@@ -16,16 +15,7 @@ export async function GET(
     return NextResponse.json({ status: "found", exercise: dataset });
   }
 
-  const cached = await readCached(slug);
-  if (cached) {
-    return NextResponse.json({ status: "found", exercise: cached });
-  }
-
-  // Not in dataset or cache — the client should trigger /api/generate.
-  // Provide nearest fuzzy matches as a helpful fallback.
-  const readable = slug.replace(/-/g, " ");
-  const suggestions = await searchExercises(readable, 6);
-  return NextResponse.json({ status: "missing", suggestions });
+  return NextResponse.json({ status: "missing", error: "Exercise not found." }, { status: 404 });
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: { slug: string } }) {

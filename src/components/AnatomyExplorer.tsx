@@ -8,7 +8,7 @@ import type { AnatomyRequest } from "./AnatomyProvider";
 import MuscleBody3D from "./MuscleBody3D";
 
 export default function AnatomyExplorer({ request, opened, onClose }: {
-  request: AnatomyRequest & { revision: number }; opened: boolean; onClose: () => void;
+  request: AnatomyRequest; opened: boolean; onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
@@ -70,7 +70,7 @@ export default function AnatomyExplorer({ request, opened, onClose }: {
     </div>
     <div className="relative" data-anatomy-explorer>
       <MuscleBody3D group={group} activeTargets={focused ? [focused] : request.targets} focusedTarget={focused}
-        view={view} viewRequest={viewRequest} pulsing={false} enabled={opened} onSelect={select} onActivate={showExercises} />
+        view={view} viewRequest={viewRequest} enabled={opened} onSelect={select} onActivate={showExercises} />
       <div className="absolute right-3 top-3 z-20 flex gap-1.5" aria-label="Body view controls">
         {(["front", "back"] as const).map(side => <button type="button" key={side} aria-label={`${side === "front" ? "Front" : "Back"} view`} aria-pressed={view === side}
           onClick={() => chooseView(side)} className="min-h-11 rounded-lg border border-white/15 bg-ink-950/90 px-3 text-xs hover:bg-white/10">{side === "front" ? "Front" : "Back"}</button>)}

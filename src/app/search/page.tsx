@@ -96,14 +96,12 @@ function Results() {
           <p className="text-white/60">
             {target ? `No exercises currently have ${targetLabel(target)} as a recorded target.` : `No exercises in the dataset match “${q}”.`}
           </p>
-          {q && !target && (
+          {(q || target) && (
             <a
-              href={`/exercise/${encodeURIComponent(
-                q.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
-              )}`}
+              href="/search"
               className="mt-4 inline-block rounded-xl bg-accent px-5 py-2.5 font-semibold text-ink-950 transition hover:bg-accent-soft"
             >
-              Generate it with AI →
+              Browse all exercises
             </a>
           )}
         </div>

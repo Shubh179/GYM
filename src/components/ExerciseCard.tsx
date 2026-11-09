@@ -55,8 +55,8 @@ export default function ExerciseCard({
               className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-5xl font-black text-accent/30">
-              {result.category === "custom" ? "Video" : "AI"}
+            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-accent/50 sm:text-lg">
+              {result.category === "custom" ? "Video" : "Exercise"}
             </div>
           )}
           <div className="absolute bottom-3 left-3 flex items-center gap-1.5">

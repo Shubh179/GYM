@@ -4,14 +4,12 @@ import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 export interface MuscleMesh { mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>; target: string; }
-let cachedAsset: Promise<ArrayBuffer> | null = null;
-function loadAsset() {
-  if (!cachedAsset) cachedAsset = fetch("/models/anatomy/body-optimized.glb").then(response => {
-    if (!response.ok) throw Error("Anatomy model unavailable");
-    return response.arrayBuffer();
-  }).catch(error => { cachedAsset = null; throw error; });
-  return cachedAsset;
+async function loadAsset() {
+  const response = await fetch("/models/anatomy/body-optimized.glb");
+  if (!response.ok) throw Error("Anatomy model unavailable");
+  return response.arrayBuffer();
 }
+const tissueColors = ["#822a36", "#932d3e", "#9b3442", "#872633", "#a33c48", "#8d3040", "#96313b"];
 
 // Map the asset's named structures to training regions. No skin-coordinate approximations.
 const targets: Record<string, string> = {
@@ -38,7 +36,7 @@ function targetFor(key: string, region: string) {
 const rearTargets = new Set(["upper-traps", "middle-back", "lower-back", "lats", "rear-delts", "triceps-long-head", "triceps-lateral-head", "triceps-medial-head", "forearm-extensors", "glute-max", "hamstrings", "gastrocnemius", "soleus"]);
 
 function prepareMuscleBody() {
-  const body = new THREE.Group(), muscles: MuscleMesh[] = [], anchors = new Map<string, THREE.Vector3>();
+  const body = new THREE.Group(), anchors = new Map<string, THREE.Vector3>();
   const ready = loadAsset().then(async buffer => {
     const { scene } = await new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).parseAsync(buffer, "");
     scene.updateMatrixWorld(true);
@@ -74,14 +72,12 @@ function prepareMuscleBody() {
       const key = String(object.userData.key ?? "");
       const target = targetFor(key, String(object.userData.region ?? ""));
       const tint = key.split("").reduce((value, letter) => value + letter.charCodeAt(0), 0) % 7;
-      const tissueColors = ["#822a36", "#932d3e", "#9b3442", "#872633", "#a33c48", "#8d3040", "#96313b"];
       const baseColor = bone ? "#e1d6bd" : connective ? "#bba89a" : tissueColors[tint];
       const material = new THREE.MeshStandardMaterial({ color: baseColor, metalness: 0, roughness: bone ? .75 : .57 });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.name = object.name; mesh.userData = { ...object.userData, target, baseColor: material.color.clone() };
       mesh.castShadow = true; mesh.receiveShadow = true; body.add(mesh);
       if (target) {
-        muscles.push({ mesh, target });
         if (object.userData.side === "left" && geometry.boundingBox) {
           if (!regions.has(target)) regions.set(target, new THREE.Box3());
           regions.get(target)!.union(geometry.boundingBox);
@@ -99,7 +95,7 @@ function prepareMuscleBody() {
       if (!batches.has(batch)) batches.set(batch, []);
       batches.get(batch)!.push(mesh);
     }
-    body.clear(); muscles.length = 0;
+    body.clear();
     for (const sources of batches.values()) {
       const first = sources[0];
       const geometry = sources.length === 1 ? first.geometry : mergeGeometries(sources.map(mesh => mesh.geometry));
@@ -107,7 +103,6 @@ function prepareMuscleBody() {
       const mesh = new THREE.Mesh(geometry, first.material);
       mesh.userData = first.userData; mesh.castShadow = true; mesh.receiveShadow = true;
       body.add(mesh);
-      if (mesh.userData.target) muscles.push({ mesh, target: mesh.userData.target });
       for (const source of sources) {
         if (source.geometry !== geometry) source.geometry.dispose();
         if (source.material !== first.material) source.material.dispose();
@@ -120,7 +115,7 @@ function prepareMuscleBody() {
     }
     body.userData.model = "z-anatomy"; body.userData.triangles = triangles;
   });
-  return { body, muscles, anchors, ready };
+  return { body, anchors, ready };
 }
 
 let prepared: Promise<ReturnType<typeof prepareMuscleBody>> | null = null;

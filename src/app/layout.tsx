@@ -15,9 +15,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "RepVisual — See how to perform any gym exercise",
+  title: "RepVisual — Exercise Browser and Training Planner",
   description:
-    "Search any gym exercise and watch an animated demonstration of the full rep: start position, movement, and finish — plus muscles worked and technique tips.",
+    "Browse exercise demonstrations, plan workouts, track your progress, and explore specific muscle targets in 3D.",
 };
 
 export default function RootLayout({

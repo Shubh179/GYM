@@ -1,20 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { SvgPose } from "@/lib/types";
-import PoseFigure from "./PoseFigure";
 
 interface Props {
   imageUrls: string[];
-  pose?: SvgPose | null;
   name: string;
 }
 
 const SPEEDS = [0.5, 1, 1.5, 2];
 
-export default function MovementViewer({ imageUrls, pose, name }: Props) {
+export default function MovementViewer({ imageUrls, name }: Props) {
   const hasPhotos = imageUrls.length >= 2;
-  const hasPose = Boolean(pose);
   const [t, setT] = useState(0); // 0 = start, 1 = finish
   const [playing, setPlaying] = useState(true);
   const [speed, setSpeed] = useState(1);
@@ -36,14 +32,13 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
   );
 
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || !hasPhotos) return;
     startRef.current = null;
     rafRef.current = requestAnimationFrame(animate);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [playing, animate]);
-  // PLACEHOLDER_BODY
+  }, [playing, animate, hasPhotos]);
   function onScrub(value: number) {
     setPlaying(false);
     setT(value);
@@ -51,10 +46,10 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
 
   const phaseLabel = t < 0.33 ? "Start" : t > 0.67 ? "Finish" : "Mid-rep";
 
-  if (!hasPhotos && !hasPose) {
+  if (!hasPhotos) {
     return (
       <div className="flex aspect-square w-full items-center justify-center rounded-2xl border border-white/10 bg-ink-850 text-white/50">
-        No visualization available.
+        No photo demonstration available.
       </div>
     );
   }
@@ -62,8 +57,6 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-ink-850 shadow-card">
       <div className="relative aspect-square w-full bg-gradient-to-b from-ink-800 to-ink-950">
-        {hasPhotos ? (
-          <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrls[0]}
@@ -77,10 +70,6 @@ export default function MovementViewer({ imageUrls, pose, name }: Props) {
               style={{ opacity: t }}
               className="absolute inset-0 h-full w-full object-contain"
             />
-          </>
-        ) : (
-          pose && <PoseFigure pose={pose} t={t} />
-        )}
 
         <div className="pointer-events-none absolute left-4 top-4 flex gap-2">
           <span

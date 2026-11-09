@@ -4,10 +4,8 @@ import { motion } from "framer-motion";
 
 export default function TechniqueSteps({
   steps,
-  tips,
 }: {
   steps: string[];
-  tips?: string[];
 }) {
   return (
     <div className="space-y-6">
@@ -33,23 +31,6 @@ export default function TechniqueSteps({
         </ol>
       </div>
 
-      {tips && tips.length > 0 && (
-        <div className="rounded-2xl border border-accent/20 bg-accent/[0.04] p-5 sm:p-6">
-          <h3 className="mb-4 font-display text-sm font-semibold uppercase tracking-wider text-accent">
-            Technique Tips
-          </h3>
-          <ul className="space-y-3">
-            {tips.map((tip, i) => (
-              <li key={i} className="flex gap-3 text-white/80">
-                <svg className="mt-1 h-4 w-4 shrink-0 text-accent" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="m5 13 4 4L19 7" />
-                </svg>
-                <span className="leading-relaxed">{tip}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }
