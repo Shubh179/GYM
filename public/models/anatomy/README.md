@@ -1,16 +1,39 @@
 # Anatomical body model
 
-The active viewer loads `body.glb`, replacing the former MakeHuman display body.
+The on-demand viewer loads `body-optimized.glb` (about 924 KB), replacing the
+former MakeHuman display body. Normal browsing uses the front/back WebP previews
+(about 14 KB each) and does not load the model or start WebGL.
 
 Source: https://github.com/slfresh/fitmitwith-anatomy-atlas
 Revision: 4120ee68b6604b8f2f69105d6de6166fad4734c4
 Original file: models/full-body-male-mobile.glb
 
-The GLB is distributed unmodified under CC BY-SA 4.0. It includes 218 named
-muscle regions plus skeletal and connective-tissue context. The viewer changes
-display scale, material colors and lighting at runtime and maps source muscle
-names to the app's training regions. These model presentation adaptations are
-also offered under CC BY-SA 4.0; this does not change the app code's license.
+`body.glb` preserves the unmodified source asset under CC BY-SA 4.0. It includes
+218 named muscle regions plus skeletal and connective-tissue context.
+`body-optimized.glb` applies Meshopt compression and attribute quantization with
+@gltf-transform/cli 4.2.1. The WebP previews are rendered from the same source
+with app lighting/colors. The viewer changes display scale, materials and
+lighting, batches named structures by training region, and maps source muscle
+names to those regions. These adapted model assets, previews and model
+presentation adaptations are also offered under CC BY-SA 4.0; this does not
+change the app code's license.
+
+Rebuild the compressed asset from the project root:
+
+```powershell
+npm.cmd exec --yes --package=@gltf-transform/cli@4.2.1 -- gltf-transform meshopt public/models/anatomy/body.glb public/models/anatomy/body-optimized.glb
+```
+
+The root AnatomyProvider owns one persistent, lazy-loaded viewer. Reopening it
+reuses its WebGL renderer and prepared geometry. Desktop shadows are computed
+once; mobile disables shadows and caps pixel ratio at 1. Geometry is decoded
+to float attributes before baking transforms to avoid quantization clamping.
+Run `node scripts/test-anatomy-performance.cjs` against the dev/production
+server to check deferred requests, renderer reuse, mesh batches, focus/escape,
+all muscle groups, mobile resolution and the no-WebGL fallback. Screenshots
+and the JSON report default to `../tmp/anatomy-performance/`; override with
+`ANATOMY_ARTIFACTS`. This supersedes the eager-viewer expectations in the older
+`tests/muscle-guide.cjs`.
 
 Credits: Z-Anatomy — The libre 3D atlas of anatomy, by Gauthier Kervyn,
 Marcin Zielinski and contributors, derived from BodyParts3D by Kousaku Okubo /

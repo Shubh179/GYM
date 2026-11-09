@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Allow production verification without overwriting a running dev server.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   async redirects() {
     return [{ source: "/", destination: "/library", permanent: false }];
   },

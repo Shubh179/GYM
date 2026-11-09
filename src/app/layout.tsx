@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import FloatingTimer from "@/components/FloatingTimer";
 import { LibraryProvider } from "@/lib/library";
 import { TimerProvider } from "@/lib/timer";
+import AnatomyProvider from "@/components/AnatomyProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,6 +31,7 @@ export default function RootLayout({
         <LibraryProvider>
           <TimerProvider>
             <MusicProvider>
+            <AnatomyProvider>
             <Navbar />
             <main>{children}</main>
             <FloatingTimer />
@@ -37,6 +39,7 @@ export default function RootLayout({
               <span className="font-semibold tracking-tight text-white/60">RepVisual</span>
               <span>Exercise data: free-exercise-db (MIT).</span>
             </footer>
+            </AnatomyProvider>
             </MusicProvider>
           </TimerProvider>
         </LibraryProvider>

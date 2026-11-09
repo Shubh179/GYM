@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import type { SearchResult } from "@/lib/types";
 import { useLibrary } from "@/lib/library";
+import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
 
 export default function ExerciseCard({
   result,
@@ -28,6 +29,7 @@ export default function ExerciseCard({
     return () => { active = false; };
   }, [result.slug, result.category, result.thumbUrl]);
   const cover = result.thumbUrl ?? resolvedCover;
+  const targetText = exerciseTargets(result).map(targetLabel).join(", ") || "Target unspecified";
 
 
   return (
@@ -110,8 +112,8 @@ export default function ExerciseCard({
           <h3 data-exercise-title title={result.name} className="line-clamp-2 h-10 break-words font-display text-sm font-semibold leading-5 text-white sm:text-base sm:leading-5">
             {result.name}
           </h3>
-          <p className="mt-1 h-4 truncate text-xs leading-4 capitalize text-white/50">
-            {result.primaryMuscles.join(", ") || result.category}
+          <p data-exercise-targets title={targetText} className="mt-1 h-4 truncate text-xs leading-4 text-white/50">
+            {targetText}
             {result.equipment ? ` · ${result.equipment}` : ""}
           </p>
         </div>
