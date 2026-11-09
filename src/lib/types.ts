@@ -9,6 +9,7 @@ export interface RawExercise {
   mechanic?: string | null;
   equipment?: string | null;
   primaryMuscles: string[];
+  targetAreas?: string[];
   secondaryMuscles: string[];
   instructions: string[];
   category: string;
@@ -26,6 +27,7 @@ export interface Exercise {
   force: string | null;
   category: string;
   primaryMuscles: string[];
+  targetAreas?: string[];
   secondaryMuscles: string[];
   instructions: string[];
   // Full CDN image URLs. [0] = start position, [1] = finish position.
@@ -45,6 +47,7 @@ export interface GeneratedExercise {
   force: string | null;
   category: string;
   primaryMuscles: string[];
+  targetAreas?: string[];
   secondaryMuscles: string[];
   instructions: string[];
   imageUrls: string[]; // empty for AI; viewer falls back to SVG pose
@@ -87,5 +90,6 @@ export interface SearchResult {
   equipment: string | null;
   category: string;
   primaryMuscles: string[];
+  targetAreas?: string[];
   thumbUrl: string | null;
 }

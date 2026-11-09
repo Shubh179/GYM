@@ -1896,3 +1896,30 @@ Supabase validation: the live table is readable and the existing local exercise 
 ## EchoPlay Music replacement
 
 The Music navigation tab now opens `/music`; `/spotify` redirects there. `MusicProvider` mounts a single EchoPlay iframe automatically when the Music page loads. It persists across client navigation. Minimize hides the iframe without unloading playback; Close unmounts it. The expanded player is responsive, and the floating timer measures its height to avoid overlap. EchoPlay manages search, songs, playlists and playback; no full-song playback guarantee is made by RepVisual. An external link is available if framing or playback fails. Previous Spotify localStorage data is left intact but is no longer used.
+
+
+## Muscle Target Overlap Warning
+
+Adding an exercise to a workout compares specific target emphasis with exercises in that session. The confirmation names shared targets and matching exercises; OK adds anyway and Cancel leaves the session unchanged. The shared LibraryProvider covers the inline picker and detail-page workout menu. Broad muscle groups alone do not trigger warnings. Logic lives in `src/lib/muscle-overlap.ts` and `src/lib/muscle-targets.ts`.
+
+### Individual Session Expansion
+
+Removed the global Expand all/Collapse all control from My Training. Sessions still start collapsed and can be expanded or collapsed individually.
+
+
+## Specific Target Emphasis (supersedes broad-muscle warnings)
+
+Overlap now compares `targetAreas`, not broad `primaryMuscles`. Custom creation requires specific targets such as Upper chest, Lower chest, Front delts, or Lats. Broad primary muscles are derived for search. Supabase persists both `primary_muscles` and `target_areas`; the pending 202611090001 migration adds both. Existing rows stay unlabelled.
+
+`muscle-targets.ts` provides a shared target catalog and conservative name/primary-muscle rules for recognizable built-in variants and older workout snapshots. Incline chest presses/flyes map to upper chest, decline variants to lower chest, identifiable flat variants to middle chest. Broad chest membership alone does not cause a warning. Ambiguous variants without explicit target metadata remain unclassified; no blanket mapping of arm muscles to individual heads is made. Explicit custom targets take precedence. These are planning emphasis labels, not claims of isolation. Search/picker and exercise detail snapshots retain targets.
+
+Reference for incline press emphasis: https://www.nasm.org/resource-center/exercise-library/incline-barbell-bench-press and https://www.nasm.org/resource-center/exercise-library/two-arm-incline-dumbbell-chest-press .
+
+
+## Editing Custom Exercises
+
+Custom detail pages include Edit exercise, reusing the admin sign-in, name/YouTube inputs, and target picker. Save changes sends an authenticated PATCH to `/api/exercise/[slug]`. The original slug and ID stay stable when renaming. Built-in records cannot be edited. Validation is shared with creation. Invalid requests and failed saves preserve the draft; successful edits refresh the detail page and current saved favourites/workout metadata. Historical completion snapshots and notes remain linked to the original slug.
+
+`GET /api/exercises?mode=custom` refreshes saved custom metadata on hydration and window focus, allowing previously saved unlabelled exercises to participate after an admin labels them. Supabase writes use the privileged server client; public clients still have read-only access. The target migration is re-runnable and grants UPDATE only to service_role.
+
+Metadata refresh uses strict database reads: during outages it returns 503 and retains the existing browser snapshots, while ordinary browsing can still use bundled fallback records. Mocked browser editing checks cover mobile/desktop, failed-save drafts, target persistence, saved-workout metadata, unchanged history/notes/progress, and overlap confirmation cancellation/acceptance.

@@ -19,7 +19,7 @@ const token=[Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base
    return reply({status:400,contentType:'application/json',body:'{"message":"Unexpected mock auth request"}'});
   });
   await context.route('**/api/exercise-access',async route=>{const signedIn=route.request().headers().authorization==='Bearer '+token;await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({requiresAuth:true,configured:true,signedIn,canCreate:signedIn,email:signedIn?'owner@example.com':undefined})});});
-  await context.route('**/api/exercises',async route=>{if(route.request().method()!=='POST')return route.continue();assert.equal(route.request().headers().authorization,'Bearer '+token);const body=route.request().postDataJSON();saves++;return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({exercise:{id:'ui-test',slug:'ui-test',name:body.name,level:'custom',category:'custom',equipment:null,primaryMuscles:[],imageUrls:['https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'],source:'custom'}})});});
+  await context.route('**/api/exercises',async route=>{if(route.request().method()!=='POST')return route.continue();assert.equal(route.request().headers().authorization,'Bearer '+token);const body=route.request().postDataJSON();assert.deepEqual(body.targetAreas,['upper-chest']);saves++;return route.fulfill({status:201,contentType:'application/json',body:JSON.stringify({exercise:{id:'ui-test',slug:'ui-test',name:body.name,level:'custom',category:'custom',equipment:null,primaryMuscles:['chest'],targetAreas:body.targetAreas,imageUrls:['https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg'],source:'custom'}})});});
   const page=await context.newPage();page.on('pageerror',error=>report.errors.push(error.message));
   await page.goto('http://localhost:3000/search',{waitUntil:'domcontentloaded',timeout:90000});
   await page.getByRole('button',{name:'+ Create exercise',exact:true}).click();
@@ -27,6 +27,8 @@ const token=[Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base
   await page.getByRole('alert').filter({hasText:'Sign-in failed'}).waitFor();assert.equal(await page.getByLabel('Password',{exact:true}).inputValue(),'');
   await page.getByLabel('Password',{exact:true}).fill('fixture-password');await page.getByRole('button',{name:'Sign in',exact:true}).click();await page.getByLabel('Exercise name',{exact:true}).waitFor();
   await page.getByLabel('Exercise name',{exact:true}).fill('UI authentication test');await page.getByLabel('YouTube link',{exact:true}).fill('https://youtu.be/dQw4w9WgXcQ');
+  await page.getByRole('button',{name:'Save exercise',exact:true}).click();await page.getByRole('alert').filter({hasText:'Select at least one specific muscle target.'}).waitFor();assert.equal(saves,0);
+  await page.getByLabel('Upper chest',{exact:true}).check();
   await page.getByRole('button',{name:'Save exercise',exact:true}).click();await page.getByRole('status').filter({hasText:'Saved UI authentication test.'}).waitFor();assert.equal(saves,1);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);assert.equal(overflow,false);
   await page.getByRole('button',{name:'Sign out',exact:true}).click();await page.getByLabel('Email',{exact:true}).waitFor();assert.equal(await page.getByLabel('Password',{exact:true}).inputValue(),'');

@@ -1,5 +1,6 @@
+import { parseCustomExerciseInput } from "@/lib/custom-exercise-input";
 import { exerciseAccess, ExerciseStorageUnavailableError } from "@/lib/supabase-server";
-import { saveCustomExercise, youtubeVideoId } from "@/lib/custom-exercises";
+import { readCustomExercises, saveCustomExercise } from "@/lib/custom-exercises";
 import { getBySlug, slugify } from "@/lib/exercises";
 import type { Exercise } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
@@ -16,6 +17,18 @@ export async function GET(req: NextRequest) {
   const muscle = searchParams.get("muscle");
   const mode = searchParams.get("mode");
 
+  if (mode === "custom") {
+    try {
+      const exercises = await readCustomExercises({ requireRemote: true });
+      return NextResponse.json({ results: exercises.map(exercise => ({
+        slug: exercise.slug, name: exercise.name, level: exercise.level, equipment: exercise.equipment,
+        category: exercise.category, primaryMuscles: exercise.primaryMuscles, targetAreas: exercise.targetAreas ?? [],
+        thumbUrl: exercise.imageUrls[0] ?? null,
+      })) }, { headers: { "Cache-Control": "no-store" } });
+    } catch {
+      return NextResponse.json({ error: "Exercise storage is not available." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
+  }
   if (mode === "muscles") {
     return NextResponse.json({ muscles: await listMuscles() });
   }
@@ -37,19 +50,16 @@ export async function POST(req: NextRequest) {
   let body;
   try { body = await req.json(); }
   catch { return NextResponse.json({ error: "Invalid request." }, { status: 400 }); }
-  const name = typeof body?.name === "string" ? body.name.trim() : "";
-  const videoId = typeof body?.youtubeUrl === "string" ? youtubeVideoId(body.youtubeUrl.trim()) : null;
+  const input = parseCustomExerciseInput(body);
+  if ("error" in input) return NextResponse.json({ error: input.error }, { status: 400 });
+  const { name, videoId, targetAreas, primaryMuscles } = input;
   const slug = slugify(name);
-  if (name.length < 2 || name.length > 120 || !slug || slug.length > 120) {
-    return NextResponse.json({ error: "Enter an exercise name between 2 and 120 characters, including a letter or number." }, { status: 400 });
-  }
-  if (!videoId) return NextResponse.json({ error: "Enter a valid YouTube video link." }, { status: 400 });
   try {
     if (await getBySlug(slug)) return NextResponse.json({ error: "An exercise with this name already exists. Choose a different name." }, { status: 409 });
     const exercise: Exercise = {
       id: `custom-${slug}`, slug, name, source: "custom", youtubeVideoId: videoId,
       level: "custom", category: "custom", equipment: null, mechanic: null, force: null,
-      primaryMuscles: [], secondaryMuscles: [], instructions: [], imageUrls: [`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`],
+      primaryMuscles, targetAreas, secondaryMuscles: [], instructions: [], imageUrls: [`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`],
     };
     const saved = await saveCustomExercise(exercise);
     return NextResponse.json({ exercise: saved }, { status: 201 });

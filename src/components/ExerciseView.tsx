@@ -1,3 +1,5 @@
+import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
+import AddExerciseForm from "./AddExerciseForm";
 import MovementViewer from "./MovementViewer";
 import MuscleMap from "./MuscleMap";
 import TechniqueSteps from "./TechniqueSteps";
@@ -48,6 +50,10 @@ export default function ExerciseView({
           {exercise.equipment ? ` · ${exercise.equipment}` : ""} · {exercise.level}
         </p>
 
+        {exerciseTargets(exercise).length > 0 && <p className="mt-2 text-sm text-accent">
+          Target emphasis: {exerciseTargets(exercise).map(targetLabel).join(", ")}
+        </p>}
+
         <div className="mt-5">
           <ExerciseActions
             exercise={{
@@ -57,11 +63,14 @@ export default function ExerciseView({
               equipment: exercise.equipment,
               category: exercise.category,
               primaryMuscles: exercise.primaryMuscles,
+              targetAreas: exerciseTargets(exercise),
               thumbUrl: exercise.imageUrls[0] ?? null,
             }}
           />
         </div>
       </div>
+
+      {exercise.source === "custom" && <AddExerciseForm editExercise={exercise} />}
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">

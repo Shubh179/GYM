@@ -1,0 +1,34 @@
+const fs = require('node:fs'), path = require('node:path'), ts = require('typescript'), assert = require('node:assert/strict');
+const cache = new Map();
+function load(file) {
+  file = path.resolve(file);
+  if (cache.has(file)) return cache.get(file).exports;
+  const module = { exports: {} }; cache.set(file, module);
+  const source = ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+  new Function('require', 'module', 'exports', source)(name => name.startsWith('.') ? load(path.join(path.dirname(file), name + '.ts')) : require(name), module, module.exports);
+  return module.exports;
+}
+const { primaryMuscleOverlapWarning: warn } = load('src/lib/muscle-overlap.ts');
+const { exerciseTargets, validMuscleTargets, musclesForTargets } = load('src/lib/muscle-targets.ts');
+const ex = (slug, name, primaryMuscles = ['chest'], extra = {}) => ({ slug, name, primaryMuscles, ...extra });
+const incline = ex('incline-barbell', 'Barbell Incline Bench Press');
+const dumbbell = ex('incline-dumbbell', 'Incline Dumbbell Press');
+const flat = ex('flat', 'Barbell Bench Press - Medium Grip');
+const decline = ex('decline', 'Decline Dumbbell Press');
+assert.match(warn(dumbbell, [incline]), /Upper chest/);
+assert.equal(warn(dumbbell, [flat, decline]), null);
+assert.equal(warn(ex('unknown', 'Unclassified chest exercise'), [incline]), null);
+assert.equal(warn(incline, [incline]), null);
+assert.equal(warn(incline, []), null);
+const custom = ex('custom', 'My custom press', ['chest'], { targetAreas: ['upper-chest'] });
+assert.match(warn(custom, [incline]), /Upper chest/);
+assert.equal(warn({ ...custom, targetAreas: ['lower-chest'] }, [incline]), null);
+assert.equal(warn({ ...custom, targetAreas: [] }, [incline]), null);
+assert.match(warn(ex('pulldown', 'Lat Pulldown', ['lats']), [ex('pullup', 'Pullups', ['lats'])]), /Lats/);
+assert.equal(warn(ex('lateral', 'Dumbbell Lateral Raise', ['shoulders']), [ex('rear', 'Rear Delt Fly', ['shoulders'])]), null);
+assert.equal(warn(ex('curl', 'Dumbbell Curl', ['biceps']), [ex('curl2', 'Barbell Curl', ['biceps'])]), null);
+assert.deepEqual(exerciseTargets(ex('incline-row', 'Incline Dumbbell Row', ['middle back'])), ['middle-back']);
+assert.deepEqual(musclesForTargets(['upper-chest', 'lower-chest', 'rear-delts']), ['chest', 'shoulders']);
+assert.equal(validMuscleTargets(['upper-chest']), true);
+for (const invalid of [[], undefined, ['chest'], ['upper-chest', 'upper-chest'], [null]]) assert.equal(validMuscleTargets(invalid), false);
+console.log('PASS specific target matching, same-region custom/built-in overlap, different regions, unknown targets, old snapshots, validation, and broad group derivation');

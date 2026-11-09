@@ -10,9 +10,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import type { SearchResult } from "./types";
+import { primaryMuscleOverlapWarning } from "./muscle-overlap";
 
 // A saved exercise carries just enough to render a card without re-fetching.
 export type SavedExercise = SearchResult;
@@ -53,6 +55,7 @@ interface LibraryState {
 
 interface LibraryContextValue extends LibraryState {
   hydrated: boolean;
+  refreshSavedExercises: (exercises: SavedExercise[]) => void;
   // Favourites
   isFavourite: (slug: string) => boolean;
   toggleFavourite: (ex: SavedExercise) => void;
@@ -143,6 +146,7 @@ const todayKey = dateToKey;
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<LibraryState>(EMPTY);
   const [hydrated, setHydrated] = useState(false);
+  const metadataGeneration = useRef(0);
 
   // Load once on mount (client only), then mark hydrated.
   useEffect(() => {
@@ -159,6 +163,41 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
       // Storage full or unavailable — fail silently; feature is best-effort.
     }
   }, [state, hydrated]);
+
+  const refreshSavedExercises = useCallback((exercises: SavedExercise[]) => {
+    metadataGeneration.current += 1;
+    const bySlug = new Map(exercises.map(exercise => [exercise.slug, exercise]));
+    setState(previous => {
+      let changed = false;
+      const refresh = (exercise: SavedExercise) => {
+        const updated = bySlug.get(exercise.slug);
+        if (!updated || JSON.stringify(updated) === JSON.stringify(exercise)) return exercise;
+        changed = true;
+        return updated;
+      };
+      const favourites = previous.favourites.map(refresh);
+      const workouts = previous.workouts.map(workout => ({ ...workout, exercises: workout.exercises.map(refresh) }));
+      return changed ? { ...previous, favourites, workouts } : previous;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    let active = true;
+    const controller = new AbortController();
+    async function refresh() {
+      const generation = ++metadataGeneration.current;
+      try {
+        const response = await fetch("/api/exercises?mode=custom", { cache: "no-store", signal: controller.signal });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active && generation === metadataGeneration.current && Array.isArray(data.results)) refreshSavedExercises(data.results);
+      } catch { /* Keep browser-local data available during network outages. */ }
+    }
+    void refresh();
+    window.addEventListener("focus", refresh);
+    return () => { active = false; controller.abort(); window.removeEventListener("focus", refresh); };
+  }, [hydrated, refreshSavedExercises]);
 
   const isFavourite = useCallback(
     (slug: string) => state.favourites.some((f) => f.slug === slug),
@@ -209,6 +248,11 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addToWorkout = useCallback((id: string, ex: SavedExercise) => {
+    const workout = state.workouts.find((w) => w.id === id);
+    if (workout?.exercises.some((e) => e.slug === ex.slug)) return;
+    const warning = primaryMuscleOverlapWarning(ex, workout?.exercises ?? []);
+    // Ask before updating state; React may run state updaters more than once.
+    if (warning && !window.confirm(warning)) return;
     setState((s) => ({
       ...s,
       workouts: s.workouts.map((w) =>
@@ -217,7 +261,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           : w
       ),
     }));
-  }, []);
+  }, [state.workouts]);
 
   const removeFromWorkout = useCallback((id: string, slug: string) => {
     setState((s) => ({
@@ -482,6 +526,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     () => ({
       ...state,
       hydrated,
+      refreshSavedExercises,
       isFavourite,
       toggleFavourite,
       createWorkout,
@@ -504,6 +549,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     [
       state,
       hydrated,
+      refreshSavedExercises,
       isFavourite,
       toggleFavourite,
       createWorkout,

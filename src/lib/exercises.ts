@@ -1,3 +1,4 @@
+import { exerciseTargets } from "./muscle-targets";
 import { readCustomExercises } from "./custom-exercises";
 import Fuse from "fuse.js";
 import { readFile } from "node:fs/promises";
@@ -79,6 +80,7 @@ function toSearchResult(e: Exercise): SearchResult {
     equipment: e.equipment,
     category: e.category,
     primaryMuscles: e.primaryMuscles,
+    targetAreas: exerciseTargets(e),
     thumbUrl: e.imageUrls[0] ?? null,
   };
 }

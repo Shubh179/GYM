@@ -469,15 +469,6 @@ export default function LibraryPage() {
   const [newName, setNewName] = useState("");
   const [collapsedWorkouts, setCollapsedWorkouts] = useState<Record<string, boolean>>({});
 
-  const allCollapsed =
-    workouts.length > 0 && workouts.every((w) => collapsedWorkouts[w.id] ?? true);
-
-  function toggleAllWorkouts() {
-    const next: Record<string, boolean> = {};
-    workouts.forEach((workout) => { next[workout.id] = !allCollapsed; });
-    setCollapsedWorkouts(next);
-  }
-
   function toggleWorkoutCollapse(id: string) {
     setCollapsedWorkouts((prev) => ({
       ...prev,
@@ -526,27 +517,6 @@ export default function LibraryPage() {
             </h2>
           </div>
           <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2 xl:flex xl:w-auto">
-            {workouts.length > 0 && (
-              <button
-                type="button"
-                onClick={toggleAllWorkouts}
-                aria-label={allCollapsed ? "Expand all workout sessions" : "Collapse all workout sessions"}
-                className="order-last col-span-2 flex min-h-11 items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-xs xl:order-none font-semibold text-white/70 transition hover:border-accent/40 hover:bg-accent/10 hover:text-accent"
-              >
-                <svg
-                  className={`h-3.5 w-3.5 transition-transform duration-200 ${
-                    allCollapsed ? "-rotate-90" : "rotate-0"
-                  }`}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                >
-                  <polyline points="6 9 12 15 18 9" />
-                </svg>
-                <span>{allCollapsed ? "Expand all" : "Collapse all"}</span>
-              </button>
-            )}
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}

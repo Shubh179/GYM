@@ -18,7 +18,7 @@ for (const file of files.filter(file => file.endsWith(".json"))) {
   if (!exercise.name?.trim() || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(exercise.slug ?? "") || !/^[a-zA-Z0-9_-]{11}$/.test(exercise.youtubeVideoId ?? "")) {
     throw new Error(`Invalid custom exercise record in ${file}.`);
   }
-  rows.push({ name: exercise.name, slug: exercise.slug, youtube_video_id: exercise.youtubeVideoId });
+  rows.push({ name: exercise.name, slug: exercise.slug, youtube_video_id: exercise.youtubeVideoId, primary_muscles: exercise.primaryMuscles ?? [], target_areas: exercise.targetAreas ?? [] });
 }
 if (process.argv.includes("--dry-run")) {
   console.log(`Found ${rows.length} valid custom exercise(s) for import. No database changes made.`);

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
 import AddExerciseForm from "./AddExerciseForm";
 import type { SearchResult } from "@/lib/types";
 import { useLibrary, type Workout } from "@/lib/library";
@@ -259,7 +260,7 @@ export default function InlineExercisePicker({
                         {ex.name}
                       </p>
                       <p className="truncate text-[11px] capitalize text-white/50">
-                        {ex.primaryMuscles.join(", ") || "General"}
+                        {exerciseTargets(ex).map(targetLabel).join(", ") || ex.primaryMuscles.join(", ") || "Target unspecified"}
                         {ex.equipment ? ` · ${ex.equipment}` : ""}
                       </p>
                       <span className="inline-block rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[9px] font-medium uppercase text-accent">

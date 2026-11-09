@@ -2,8 +2,11 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useLibrary } from "@/lib/library";
+import { MUSCLE_TARGETS } from "@/lib/muscle-targets";
 import { browserSupabase } from "@/lib/supabase-browser";
-import type { SearchResult } from "@/lib/types";
+import type { Exercise, SearchResult } from "@/lib/types";
 
 interface Access {
   configured: boolean;
@@ -15,10 +18,16 @@ interface Access {
 const inputClass = "mt-1 block w-full rounded-lg border border-white/15 bg-ink-850 px-3 py-2 text-base text-white";
 const buttonClass = "min-h-11 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-ink-950 disabled:opacity-50";
 
-export default function AddExerciseForm({ onCreated }: { onCreated?: (exercise: SearchResult) => void }) {
+export default function AddExerciseForm({ onCreated, editExercise }: {
+  onCreated?: (exercise: SearchResult) => void;
+  editExercise?: Exercise;
+}) {
+  const router = useRouter();
+  const { refreshSavedExercises } = useLibrary();
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [name, setName] = useState(editExercise?.name ?? "");
+  const [youtubeUrl, setYoutubeUrl] = useState(editExercise?.youtubeVideoId ? `https://www.youtube.com/watch?v=${editExercise.youtubeVideoId}` : "");
+  const [targetAreas, setTargetAreas] = useState<string[]>(editExercise?.targetAreas ?? []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [created, setCreated] = useState<SearchResult | null>(null);
@@ -80,28 +89,42 @@ export default function AddExerciseForm({ onCreated }: { onCreated?: (exercise: 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
+    if (!targetAreas.length) { setError("Select at least one specific muscle target."); return; }
     setSaving(true); setError(""); setCreated(null);
     try {
-      const response = await fetch("/api/exercises", {
-        method: "POST", headers: { "Content-Type": "application/json", ...await authHeaders() },
-        body: JSON.stringify({ name, youtubeUrl }),
+      const response = await fetch(editExercise ? `/api/exercise/${encodeURIComponent(editExercise.slug)}` : "/api/exercises", {
+        method: editExercise ? "PATCH" : "POST", headers: { "Content-Type": "application/json", ...await authHeaders() },
+        body: JSON.stringify({ name, youtubeUrl, targetAreas }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Could not save exercise.");
       const exercise = { ...data.exercise, thumbUrl: data.exercise.imageUrls?.[0] ?? null } as SearchResult;
-      onCreated?.(exercise); setCreated(exercise); setName(""); setYoutubeUrl("");
+      setCreated(exercise);
+      if (editExercise) {
+        refreshSavedExercises([exercise]);
+        router.refresh();
+      } else {
+        onCreated?.(exercise); setName(""); setYoutubeUrl(""); setTargetAreas([]);
+      }
     } catch (err) { setError(err instanceof Error ? err.message : "Could not save exercise."); }
     finally { setSaving(false); }
   }
 
   return <div className="my-4">
-    <button type="button" onClick={() => { setOpen(value => !value); setError(""); }} aria-expanded={open}
+    <button type="button" onClick={() => {
+      if (!open && editExercise) {
+        setName(editExercise.name);
+        setYoutubeUrl(editExercise.youtubeVideoId ? `https://www.youtube.com/watch?v=${editExercise.youtubeVideoId}` : "");
+        setTargetAreas(editExercise.targetAreas ?? []);
+      }
+      setOpen(value => !value); setError(""); setCreated(null);
+    }} aria-expanded={open}
       className="min-h-11 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent">
-      {open ? "Close new exercise" : "+ Create exercise"}
+      {open ? (editExercise ? "Close editor" : "Close new exercise") : (editExercise ? "Edit exercise" : "+ Create exercise")}
     </button>
     {open && <div className="mt-3 space-y-3 rounded-2xl border border-white/10 bg-ink-900 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-semibold text-white">Add exercise</h2>
+        <h2 className="font-semibold text-white">{editExercise ? "Edit exercise" : "Add exercise"}</h2>
         {access?.signedIn && <button type="button" onClick={signOut} className="min-h-11 px-2 text-sm text-white/60">Sign out</button>}
       </div>
       {!access ? (!error && <p role="status" className="text-sm text-white/60">Checking access...</p>) : !access.configured ?
@@ -115,10 +138,22 @@ export default function AddExerciseForm({ onCreated }: { onCreated?: (exercise: 
             <input required type="url" value={youtubeUrl} onChange={event => setYoutubeUrl(event.target.value)} disabled={saving}
               placeholder="https://www.youtube.com/watch?v=..." className={inputClass} />
           </label>
-          <button disabled={saving} className={buttonClass}>{saving ? "Saving..." : "Save exercise"}</button>
-        </form> : access.signedIn ? <p role="status" className="text-sm text-white/60">This account cannot add exercises. Sign out to use the admin account.</p> :
+          <fieldset disabled={saving} className="rounded-lg border border-white/15 p-3">
+            <legend className="px-1 text-sm text-white/70">Muscle targets (required)</legend>
+            <p className="mb-2 text-xs text-white/50">Select the specific target emphasis, e.g. Upper chest for incline presses.</p>
+            <div className="grid grid-cols-1 gap-1 min-[380px]:grid-cols-2 lg:grid-cols-3">
+              {MUSCLE_TARGETS.map(target => <label key={target.id} className="flex min-h-11 cursor-pointer items-center gap-2 text-sm capitalize text-white/80">
+                <input type="checkbox" checked={targetAreas.includes(target.id)}
+                  onChange={event => setTargetAreas(previous => event.target.checked ? [...previous, target.id] : previous.filter(value => value !== target.id))}
+                  className="h-4 w-4 shrink-0 accent-accent" />
+                {target.label}
+              </label>)}
+            </div>
+          </fieldset>
+          <button disabled={saving} className={buttonClass}>{saving ? "Saving..." : editExercise ? "Save changes" : "Save exercise"}</button>
+        </form> : access.signedIn ? <p role="status" className="text-sm text-white/60">This account cannot manage exercises. Sign out to use the admin account.</p> :
         <form onSubmit={signIn} className="space-y-3">
-          <p className="text-sm text-white/60">Sign in with your admin account to add exercises.</p>
+          <p className="text-sm text-white/60">Sign in with your admin account to manage exercises.</p>
           <label className="block text-sm text-white/70">Email
             <input required type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} className={inputClass} />
           </label>

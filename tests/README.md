@@ -21,3 +21,6 @@ Screenshots and JSON results are saved to `artifacts/mobile/`. `report.json` con
 - `node tests/supabase-storage.cjs`: isolated server/storage authorization checks using fake Supabase clients. It never uses production keys or writes live records.
 - `node tests/supabase-auth.cjs`: Chrome sign-in/save/sign-out checks at 320px, 390px, and 1280px. Auth and write requests are intercepted; test passwords and exercises never reach the real database.
 - `npm run db:import-exercises -- --dry-run`: validate local custom exercise files without inserting them. Running without `--dry-run` intentionally imports local records into the configured database and preserves existing slugs.
+
+
+- `node tests/custom-exercise-edit.cjs`: mocked custom editing at 320px, 390px, and 1280px; checks prefill, required targets, failed-save drafts, current workout/favourite refresh, stable notes/history, and overlap confirmation cancellation/acceptance. All edit requests are intercepted; no live exercise records are changed. Uses the existing Lower Chest Cable detail page as its starting fixture.

@@ -5,8 +5,9 @@ import type { Exercise } from "./types";
 import { createServerSupabase, ExerciseStorageUnavailableError, supabaseConfigured } from "./supabase-server";
 
 const directory = path.join(process.cwd(), "data", "custom");
-interface CustomRow { id: string; name: string; slug: string; youtube_video_id: string; }
-const columns = "id,name,slug,youtube_video_id";
+interface CustomRow { id: string; name: string; slug: string; youtube_video_id: string; primary_muscles?: string[]; target_areas?: string[]; }
+// Select all columns so existing public records remain readable before migration.
+const columns = "*";
 
 function withYoutubeCover(exercise: Exercise): Exercise {
   return exercise.youtubeVideoId && /^[a-zA-Z0-9_-]{11}$/.test(exercise.youtubeVideoId)
@@ -18,7 +19,7 @@ function fromRow(row: CustomRow): Exercise {
   return withYoutubeCover({
     id: row.id, name: row.name, slug: row.slug, youtubeVideoId: row.youtube_video_id,
     source: "custom", level: "custom", category: "custom", equipment: null, mechanic: null, force: null,
-    primaryMuscles: [], secondaryMuscles: [], instructions: [], imageUrls: [],
+    primaryMuscles: row.primary_muscles ?? [], targetAreas: row.target_areas ?? [], secondaryMuscles: [], instructions: [], imageUrls: [],
   });
 }
 
@@ -33,7 +34,7 @@ async function bundledExercises(): Promise<Exercise[]> {
     withYoutubeCover(JSON.parse(await readFile(path.join(directory, file), "utf8")) as Exercise)));
 }
 
-export async function readCustomExercises(): Promise<Exercise[]> {
+export async function readCustomExercises(options: { requireRemote?: boolean } = {}): Promise<Exercise[]> {
   const bundled = await bundledExercises();
   if (!supabaseConfigured()) return bundled;
   try {
@@ -52,7 +53,8 @@ export async function readCustomExercises(): Promise<Exercise[]> {
     const merged = new Map(remote.map(exercise => [exercise.slug, exercise]));
     for (const exercise of bundled) if (!merged.has(exercise.slug)) merged.set(exercise.slug, exercise);
     return [...merged.values()];
-  } catch {
+  } catch (error) {
+    if (options.requireRemote) throw error;
     // A database outage must not prevent browsing the bundled exercise catalog.
     console.warn("Custom exercise database unavailable; using bundled exercises.");
     return bundled;
@@ -62,7 +64,7 @@ export async function readCustomExercises(): Promise<Exercise[]> {
 export async function saveCustomExercise(exercise: Exercise): Promise<Exercise> {
   if (supabaseConfigured()) {
     const { data, error } = await createServerSupabase(true).from("custom_exercises").insert({
-      name: exercise.name, slug: exercise.slug, youtube_video_id: exercise.youtubeVideoId,
+      name: exercise.name, slug: exercise.slug, youtube_video_id: exercise.youtubeVideoId, primary_muscles: exercise.primaryMuscles, target_areas: exercise.targetAreas ?? [],
     }).select(columns).abortSignal(AbortSignal.timeout(10000)).single();
     if (error?.code === "23505") throw Object.assign(new Error("Exercise already exists."), { code: "EEXIST" });
     if (error || !data) throw new ExerciseStorageUnavailableError();
@@ -73,6 +75,28 @@ export async function saveCustomExercise(exercise: Exercise): Promise<Exercise> 
   const covered = withYoutubeCover(exercise);
   await writeFile(path.join(directory, `${exercise.slug}.json`), JSON.stringify(covered, null, 2), { flag: "wx" });
   return covered;
+}
+
+// Update by the original slug so workout membership, notes and URLs remain stable.
+export async function updateCustomExercise(slug: string, changes: Pick<Exercise, "name" | "youtubeVideoId" | "primaryMuscles" | "targetAreas">): Promise<Exercise | null> {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 120) return null;
+  if (supabaseConfigured()) {
+    const { data, error } = await createServerSupabase(true).from("custom_exercises").update({
+      name: changes.name, youtube_video_id: changes.youtubeVideoId,
+      primary_muscles: changes.primaryMuscles, target_areas: changes.targetAreas ?? [],
+    }).eq("slug", slug).select(columns).abortSignal(AbortSignal.timeout(10000)).maybeSingle();
+    if (error) throw new ExerciseStorageUnavailableError();
+    return data ? fromRow(data as CustomRow) : null;
+  }
+  if (process.env.VERCEL === "1" || process.env.NODE_ENV === "production") throw new ExerciseStorageUnavailableError();
+  const file = path.join(directory, `${slug}.json`);
+  let current: Exercise;
+  try { current = JSON.parse(await readFile(file, "utf8")) as Exercise; }
+  catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
+  if (current.source !== "custom") return null;
+  const updated = withYoutubeCover({ ...current, ...changes, slug: current.slug, id: current.id });
+  await writeFile(file, JSON.stringify(updated, null, 2), { flag: "w" });
+  return updated;
 }
 
 export function youtubeVideoId(value: string): string | null {
