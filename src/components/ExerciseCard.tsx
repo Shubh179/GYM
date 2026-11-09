@@ -61,7 +61,7 @@ export default function ExerciseCard({
           )}
           <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
             <span className="rounded-md border border-white/10 bg-ink-950/80 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-white/80 backdrop-blur">
-              {result.level}
+              {result.level === "expert" ? "advanced" : result.level}
             </span>
             {noteSaved && (
               <span

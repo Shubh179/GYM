@@ -4,8 +4,8 @@ import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
 import type { SearchResult } from "@/lib/types";
 import { useAnatomyExplorer } from "./AnatomyProvider";
 
-interface Props { sessionName?: string; exercises: SearchResult[]; exerciseMode?: boolean; }
-export default function MuscleGuide({ sessionName = "", exercises, exerciseMode = false }: Props) {
+interface Props { sessionName?: string; sessionId?: string; exercises: SearchResult[]; exerciseMode?: boolean; }
+export default function MuscleGuide({ sessionName = "", sessionId, exercises, exerciseMode = false }: Props) {
   const open = useAnatomyExplorer();
   const exercise = exerciseMode ? exercises[0] : undefined;
   const groupId = exercise ? groupForExercise(exercise) ?? "chest" : groupForSession(sessionName, exercises);
@@ -23,7 +23,7 @@ export default function MuscleGuide({ sessionName = "", exercises, exerciseMode 
     <div className="min-w-0 flex-1">
       <h3 className="text-sm font-semibold text-white">{group.label} anatomy</h3>
       <p title={description} className="mt-1 line-clamp-2 text-xs leading-5 text-white/55">{description}</p>
-      <button type="button" onClick={() => open({ groupId: group.id, targets, view, title: exercise ? `${exercise.name} · Anatomy` : `${group.label} anatomy` })}
+      <button type="button" onClick={() => open({ groupId: group.id, targets, view, sessionId, title: exercise ? `${exercise.name} · Anatomy` : `${group.label} anatomy` })}
         className="mt-3 min-h-11 rounded-lg border border-rose-300/20 bg-rose-300/10 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-300/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200">Explore in 3D</button>
       <a href="/models/anatomy/README.md" target="_blank" rel="noreferrer" className="mt-2 block w-fit text-[9px] text-white/35 underline underline-offset-2">Z-Anatomy / BodyParts3D · CC BY-SA 4.0</a>
     </div>

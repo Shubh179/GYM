@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import type { BodyView, MuscleGroupId } from "@/lib/muscle-guide";
 
-export interface AnatomyRequest { groupId: MuscleGroupId; targets: string[]; view: BodyView; title: string; }
+export interface AnatomyRequest { groupId: MuscleGroupId; targets: string[]; view: BodyView; title: string; sessionId?: string; }
 const Explorer = dynamic(() => import("./AnatomyExplorer"), { ssr: false });
 const AnatomyContext = createContext<((request: AnatomyRequest) => void) | null>(null);
 export function useAnatomyExplorer() {

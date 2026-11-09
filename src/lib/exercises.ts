@@ -1,4 +1,4 @@
-import { exerciseTargets } from "./muscle-targets";
+import { exerciseTargets, sortByDifficulty } from "./muscle-targets";
 import { readCustomExercises } from "./custom-exercises";
 import Fuse from "fuse.js";
 import { readFile } from "node:fs/promises";
@@ -32,6 +32,7 @@ function normalize(raw: RawExercise): Exercise {
     force: raw.force ?? null,
     category: raw.category,
     primaryMuscles: raw.primaryMuscles ?? [],
+    targetAreas: raw.targetAreas,
     secondaryMuscles: raw.secondaryMuscles ?? [],
     instructions: raw.instructions ?? [],
     imageUrls: (raw.images ?? []).map(imageUrl),
@@ -113,6 +114,11 @@ export async function byMuscle(muscle: string, limit = 48): Promise<SearchResult
     .filter((e) => e.primaryMuscles.includes(muscle))
     .slice(0, limit)
     .map(toSearchResult);
+}
+
+export async function byTarget(target: string): Promise<SearchResult[]> {
+  const all = await getAllExercises();
+  return sortByDifficulty(all.filter(exercise => exerciseTargets(exercise).includes(target))).map(toSearchResult);
 }
 
 export async function popularExercises(limit = 8): Promise<SearchResult[]> {

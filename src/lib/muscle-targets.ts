@@ -44,6 +44,13 @@ export function targetLabel(id: string): string {
   return MUSCLE_TARGETS.find(target => target.id === id)?.label ?? id;
 }
 
+export function sortByDifficulty<T extends { level: string }>(exercises: T[]): T[] {
+  const rank: Record<string, number> = { beginner: 0, intermediate: 1, advanced: 2, advance: 2, expert: 2 };
+  // Stable sorting retains the original order within each level. Custom and
+  // unrated exercises follow known levels rather than inventing a difficulty.
+  return [...exercises].sort((a, b) => (rank[a.level.toLowerCase()] ?? 3) - (rank[b.level.toLowerCase()] ?? 3));
+}
+
 type TargetExercise = Pick<SearchResult, "name" | "primaryMuscles" | "targetAreas">;
 export function exerciseTargets(exercise: TargetExercise): string[] {
   // Explicit metadata wins, including an explicit empty list for an unknown target.

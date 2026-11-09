@@ -35,6 +35,17 @@ and the JSON report default to `../tmp/anatomy-performance/`; override with
 `ANATOMY_ARTIFACTS`. This supersedes the eager-viewer expectations in the older
 `tests/muscle-guide.cjs`.
 
+Double-tapping a rendered muscle or its label closes the viewer and focuses the
+first exercise in the current workout with that exact target. It does not open
+the exercise detail page. If there is no match in the current workout (or the
+viewer was opened outside a workout), it browses `/search?target=<target-id>`.
+Target search returns all exact matches ordered beginner, intermediate, then
+advanced/expert; custom/unrated exercises follow. A focused muscle also exposes
+a keyboard-accessible "Show exercises" button. Single taps retain selection,
+and dragging/pinch gestures do not activate target navigation.
+Run `node scripts/test-anatomy-targets.cjs` for session scoping, mesh/label
+double-taps, keyboard activation, exact-target filtering and difficulty ordering.
+
 Credits: Z-Anatomy — The libre 3D atlas of anatomy, by Gauthier Kervyn,
 Marcin Zielinski and contributors, derived from BodyParts3D by Kousaku Okubo /
 The Database Center for Life Science. Mobile model adaptation: Fit Mit With.

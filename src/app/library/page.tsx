@@ -64,7 +64,7 @@ function WorkoutBlock({
   const completedCount = sessionDone ? (recordedSession?.exercises.length ?? 0) : done;
 
   return (
-    <div className="rounded-xl border border-white/10 bg-ink-850 p-4 transition sm:p-6">
+    <div data-workout-id={workout.id} className="rounded-xl border border-white/10 bg-ink-850 p-4 transition sm:p-6">
       <div
         className={`flex flex-wrap items-center justify-between gap-3 ${
           collapsed ? "" : "mb-4"
@@ -262,7 +262,7 @@ function WorkoutBlock({
             )}
 
             {/* Expandable Inline Exercise Search & Add Drawer */}
-            <MuscleGuide sessionName={workout.name} exercises={workout.exercises} />
+            <MuscleGuide sessionName={workout.name} sessionId={workout.id} exercises={workout.exercises} />
 
             <AnimatePresence>
               {showAddExercise && (
@@ -309,7 +309,7 @@ function WorkoutBlock({
                     ? Boolean(recordedSession?.exercises.some((saved) => saved.slug === ex.slug))
                     : isExerciseDone(workout.id, ex.slug);
                   return (
-                    <div key={ex.slug} data-workout-exercise className="flex h-full min-w-0 flex-col gap-2">
+                    <div key={ex.slug} data-workout-exercise data-exercise-slug={ex.slug} role="group" tabIndex={-1} aria-label={ex.name} className="flex h-full min-w-0 scroll-mt-36 flex-col gap-2 rounded-xl focus:outline focus:outline-2 focus:outline-offset-4 focus:outline-accent">
                       <div className="relative">
                         <ExerciseCard result={ex} index={i} />
                         <button

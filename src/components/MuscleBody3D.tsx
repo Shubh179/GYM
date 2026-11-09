@@ -13,6 +13,7 @@ interface Props {
     viewRequest: number;
     pulsing: boolean;
     onSelect: (id: string) => void;
+    onActivate: (id: string) => void;
     enabled?: boolean;
 }
 export default function MuscleBody3D(props: Props) {
@@ -23,6 +24,18 @@ export default function MuscleBody3D(props: Props) {
     const update = useRef<(() => void) | null>(null);
     const [unavailable, setUnavailable] = useState(false);
     const [ready, setReady] = useState(false);
+    const lastTap = useRef<{ target: string; time: number; x: number; y: number } | null>(null);
+    function tapTarget(target: string, x: number, y: number, time: number) {
+        const previous = lastTap.current;
+        if (previous?.target === target && time - previous.time < 400 && Math.hypot(x - previous.x, y - previous.y) < 24) {
+            lastTap.current = null;
+            live.current.onActivate(target);
+        } else {
+            lastTap.current = { target, time, x, y };
+            live.current.onSelect(target);
+        }
+    }
+    useEffect(() => { lastTap.current = null; }, [props.group.id, props.enabled]);
     useEffect(() => {
         const host = container.current;
         if (!host)
@@ -165,14 +178,34 @@ export default function MuscleBody3D(props: Props) {
             update.current?.(); });
         intersection.observe(host);
         const raycaster = new THREE.Raycaster();
-        let down = [0, 0];
-        const pointerDown = (event: PointerEvent) => { down = [event.clientX, event.clientY]; };
-        const pointerUp = (event: PointerEvent) => { if (Math.hypot(event.clientX - down[0], event.clientY - down[1]) > 7)
-            return; const rect = renderer.domElement.getBoundingClientRect(); raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera); const hit = raycaster.intersectObjects(body.children, false)[0]; const target = hit?.object.userData.target as string | undefined; if (target && live.current.group.regions.some(region => region.id === target))
-            live.current.onSelect(target); };
+        let down: { id: number; x: number; y: number; moved: boolean } | null = null;
+        const pointerDown = (event: PointerEvent) => {
+            down = event.isPrimary ? { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false } : null;
+            if (!event.isPrimary) lastTap.current = null;
+        };
+        const pointerCancel = () => { down = null; lastTap.current = null; };
+        const pointerMove = (event: PointerEvent) => {
+            if (down && down.id === event.pointerId && Math.hypot(event.clientX - down.x, event.clientY - down.y) > 7) {
+                down.moved = true; lastTap.current = null;
+            }
+        };
+        const pointerUp = (event: PointerEvent) => {
+            const start = down; down = null;
+            if (!start || start.moved || start.id !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 7) {
+                lastTap.current = null; return;
+            }
+            const rect = renderer.domElement.getBoundingClientRect();
+            raycaster.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1), camera);
+            const hit = raycaster.intersectObjects(body.children, false)[0];
+            const target = hit?.object.userData.target as string | undefined;
+            if (target && live.current.group.regions.some(region => region.id === target)) tapTarget(target, event.clientX, event.clientY, event.timeStamp);
+            else lastTap.current = null;
+        };
         const contextLost = (event: Event) => { event.preventDefault(); setUnavailable(true); };
         renderer.domElement.addEventListener("pointerdown", pointerDown);
         renderer.domElement.addEventListener("pointerup", pointerUp);
+        renderer.domElement.addEventListener("pointercancel", pointerCancel);
+        renderer.domElement.addEventListener("pointermove", pointerMove);
         renderer.domElement.addEventListener("webglcontextlost", contextLost);
         controls.addEventListener("change", render);
         const canAnimate = () => live.current.enabled !== false && live.current.pulsing && visible && !document.hidden && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -188,7 +221,7 @@ export default function MuscleBody3D(props: Props) {
         document.addEventListener("visibilitychange", sync);
         resize();
         modelReady.then(() => { if (active) { renderer.shadowMap.needsUpdate = !mobile; resize();setReady(true); } }).catch(() => { if (active) setUnavailable(true); });
-        return () => { active = false; loadController.abort();environment.dispose();key.shadow.dispose(); cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); controls.dispose(); document.removeEventListener("visibilitychange", sync); update.current = null; renderer.domElement.removeEventListener("pointerdown", pointerDown); renderer.domElement.removeEventListener("pointerup", pointerUp); renderer.domElement.removeEventListener("webglcontextlost", contextLost); const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(); scene.traverse(object => { if (object instanceof THREE.Mesh) {
+        return () => { active = false; loadController.abort();environment.dispose();key.shadow.dispose(); cancelAnimationFrame(frame); observer.disconnect(); intersection.disconnect(); controls.dispose(); document.removeEventListener("visibilitychange", sync); update.current = null; renderer.domElement.removeEventListener("pointerdown", pointerDown); renderer.domElement.removeEventListener("pointerup", pointerUp); renderer.domElement.removeEventListener("pointercancel", pointerCancel); renderer.domElement.removeEventListener("pointermove", pointerMove); renderer.domElement.removeEventListener("webglcontextlost", contextLost); const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(); scene.traverse(object => { if (object instanceof THREE.Mesh) {
             if (!object.userData.sharedAnatomyGeometry) geometries.add(object.geometry);
             for (const material of Array.isArray(object.material) ? object.material : [object.material])
                 materials.add(material);
@@ -210,7 +243,7 @@ export default function MuscleBody3D(props: Props) {
           <defs>{props.group.regions.map(region => <marker key={region.id} id={`${markerId}-${region.id}`} viewBox="0 0 8 8" refX="6" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 8 4 0 8 2 4Z" fill={region.color}/></marker>)}</defs>
           {props.group.regions.map(region => <line key={region.id} data-muscle-leader={region.id} stroke={region.color} strokeWidth="1.3" opacity=".85" markerEnd={`url(#${markerId}-${region.id})`}/>)}
         </svg>}
-        {ready && !unavailable && props.group.regions.map(region => <button key={region.id} data-muscle-label={region.id} title={region.label} aria-label={`Locate ${region.label}`} aria-pressed={props.focusedTarget === region.id} onClick={() => props.onSelect(region.id)} style={{color:region.color,display:region.view === props.view ? "flex" : "none"}} className="absolute z-10 min-h-11 w-[84px] -translate-x-1/2 -translate-y-1/2 items-center break-words rounded px-1 py-1 text-left text-[11px] font-medium leading-4 transition hover:brightness-125 sm:w-[132px] sm:text-sm">
+        {ready && !unavailable && props.group.regions.map(region => <button key={region.id} data-muscle-label={region.id} title={`${region.label}: double-tap to find exercises`} aria-label={`Locate ${region.label}`} aria-pressed={props.focusedTarget === region.id} onClick={event => { if (event.detail === 0) { lastTap.current = null; props.onSelect(region.id); } else tapTarget(region.id, event.clientX, event.clientY, event.timeStamp); }} style={{color:region.color,display:region.view === props.view ? "flex" : "none"}} className="absolute z-10 min-h-11 w-[84px] -translate-x-1/2 -translate-y-1/2 touch-manipulation select-none items-center break-words rounded px-1 py-1 text-left text-[11px] font-medium leading-4 transition hover:brightness-125 sm:w-[132px] sm:text-sm">
           {region.id === "gastrocnemius" ? "Gastrocnemius" : region.id === "soleus" ? "Soleus" : region.label}
         </button>)}
         {unavailable && <div role="status" className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">

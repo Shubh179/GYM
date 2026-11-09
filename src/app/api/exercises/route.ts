@@ -4,9 +4,11 @@ import { readCustomExercises, saveCustomExercise } from "@/lib/custom-exercises"
 import { getBySlug, slugify } from "@/lib/exercises";
 import type { Exercise } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
+import { MUSCLE_TARGETS } from "@/lib/muscle-targets";
 import {
   searchExercises,
   byMuscle,
+  byTarget,
   listMuscles,
   popularExercises,
 } from "@/lib/exercises";
@@ -15,6 +17,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q") ?? "";
   const muscle = searchParams.get("muscle");
+  const target = searchParams.get("target");
   const mode = searchParams.get("mode");
 
   if (mode === "custom") {
@@ -34,6 +37,12 @@ export async function GET(req: NextRequest) {
   }
   if (mode === "popular") {
     return NextResponse.json({ results: await popularExercises() });
+  }
+  if (target !== null) {
+    if (!MUSCLE_TARGETS.some(item => item.id === target)) {
+      return NextResponse.json({ error: "Unknown muscle target." }, { status: 400 });
+    }
+    return NextResponse.json({ results: await byTarget(target) });
   }
   if (muscle) {
     return NextResponse.json({ results: await byMuscle(muscle) });

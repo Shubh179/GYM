@@ -6,26 +6,41 @@ import AddExerciseForm from "@/components/AddExerciseForm";
 import SearchBar from "@/components/SearchBar";
 import ExerciseCard from "@/components/ExerciseCard";
 import type { SearchResult } from "@/lib/types";
+import { exerciseTargets, sortByDifficulty, targetLabel } from "@/lib/muscle-targets";
 
 function Results() {
   const params = useSearchParams();
   const q = params.get("q") ?? "";
   const muscle = params.get("muscle") ?? "";
+  const target = params.get("target") ?? "";
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     setLoading(true);
-    const url = muscle
+    setError("");
+    const controller = new AbortController();
+    const url = target
+      ? `/api/exercises?target=${encodeURIComponent(target)}`
+      : muscle
       ? `/api/exercises?muscle=${encodeURIComponent(muscle)}`
       : `/api/exercises?q=${encodeURIComponent(q)}`;
-    fetch(url)
-      .then((r) => r.json())
-      .then((d) => setResults(d.results ?? []))
-      .finally(() => setLoading(false));
-  }, [q, muscle]);
+    fetch(url, { signal: controller.signal })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok) throw Error(data.error || "Could not load exercises.");
+        return data;
+      })
+      .then(data => { if (!controller.signal.aborted) setResults(data.results ?? []); })
+      .catch(cause => { if (!controller.signal.aborted) { setResults([]); setError(cause.message || "Could not load exercises."); } })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [q, muscle, target]);
 
-  const heading = muscle
+  const heading = target
+    ? `Exercises for ${targetLabel(target)}`
+    : muscle
     ? `Exercises for ${muscle}`
     : q
     ? `Results for “${q}”`
@@ -38,6 +53,8 @@ function Results() {
         <h1 className="page-title">Exercises</h1>
 
       </div>
+
+      {target && <p className="mb-5 text-xs text-white/50">Beginner, intermediate, then advanced. Unrated exercises follow.</p>}
       <div className="mb-8 max-w-2xl">
         <SearchBar size="md" initialQuery={q} />
       </div>
@@ -51,9 +68,15 @@ function Results() {
         )}
       </div>
 
-      <AddExerciseForm onCreated={exercise => setResults(previous => [exercise, ...previous.filter(item => item.slug !== exercise.slug)])} />
+      <AddExerciseForm onCreated={exercise => {
+        if (target && !exerciseTargets(exercise).includes(target)) return;
+        setResults(previous => {
+          const next = [exercise, ...previous.filter(item => item.slug !== exercise.slug)];
+          return target ? sortByDifficulty(next) : next;
+        });
+      }} />
 
-      {loading ? (
+      {error ? <div role="alert" className="rounded-xl border border-red-400/20 bg-red-400/5 p-6 text-sm text-red-200">{error}</div> : loading ? (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
@@ -71,9 +94,9 @@ function Results() {
       ) : (
         <div className="rounded-2xl border border-white/10 bg-ink-850 p-10 text-center">
           <p className="text-white/60">
-            No exercises in the dataset match “{q}”.
+            {target ? `No exercises currently have ${targetLabel(target)} as a recorded target.` : `No exercises in the dataset match “${q}”.`}
           </p>
-          {q && (
+          {q && !target && (
             <a
               href={`/exercise/${encodeURIComponent(
                 q.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
