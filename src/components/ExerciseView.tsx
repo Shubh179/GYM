@@ -1,4 +1,5 @@
 import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
+import MuscleGuide from "./MuscleGuide";
 import AddExerciseForm from "./AddExerciseForm";
 import MovementViewer from "./MovementViewer";
 import MuscleMap from "./MuscleMap";
@@ -71,6 +72,12 @@ export default function ExerciseView({
       </div>
 
       {exercise.source === "custom" && <AddExerciseForm editExercise={exercise} />}
+
+      <MuscleGuide key={exercise.slug} exerciseMode exercises={[{
+        slug: exercise.slug, name: exercise.name, level: exercise.level, category: exercise.category,
+        equipment: exercise.equipment, primaryMuscles: exercise.primaryMuscles,
+        targetAreas: exerciseTargets(exercise), thumbUrl: exercise.imageUrls[0] ?? null,
+      }]} />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="space-y-6">

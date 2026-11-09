@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ExerciseCard from "@/components/ExerciseCard";
 import WeeklySchedule from "@/components/WeeklySchedule";
 import WorkoutHeatmap from "@/components/WorkoutHeatmap";
+import MuscleGuide from "@/components/MuscleGuide";
 import InlineExercisePicker from "@/components/InlineExercisePicker";
 import QuickNotes from "@/components/QuickNotes";
 import {
@@ -261,6 +262,8 @@ function WorkoutBlock({
             )}
 
             {/* Expandable Inline Exercise Search & Add Drawer */}
+            <MuscleGuide sessionName={workout.name} exercises={workout.exercises} />
+
             <AnimatePresence>
               {showAddExercise && (
                 <InlineExercisePicker

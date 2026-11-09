@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/slfresh/fitmitwith-anatomy-atlas",
+  "revision": "4120ee68b6604b8f2f69105d6de6166fad4734c4",
+  "license": "CC-BY-SA-4.0",
+  "changes": "Unmodified GLB; runtime display scale, materials and training-region mapping only."
+}
