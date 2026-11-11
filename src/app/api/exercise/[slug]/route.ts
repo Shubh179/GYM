@@ -2,7 +2,7 @@ import { parseCustomExerciseInput } from "@/lib/custom-exercise-input";
 import { updateCustomExercise } from "@/lib/custom-exercises";
 import { exerciseAccess, ExerciseStorageUnavailableError } from "@/lib/supabase-server";
 import { NextRequest, NextResponse } from "next/server";
-import { getBySlug } from "@/lib/exercises";
+import { getBySlug, invalidateExerciseCatalog } from "@/lib/exercises";
 
 export async function GET(
   _req: NextRequest,
@@ -34,6 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { slug: stri
       name: input.name, youtubeVideoId: input.videoId, primaryMuscles: input.primaryMuscles, targetAreas: input.targetAreas,
     });
     if (!exercise) return NextResponse.json({ error: "Custom exercise not found. Built-in exercises cannot be edited." }, { status: 404 });
+    invalidateExerciseCatalog();
     return NextResponse.json({ exercise }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     if (error instanceof ExerciseStorageUnavailableError) return NextResponse.json({ error: error.message }, { status: 503 });

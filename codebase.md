@@ -8,9 +8,9 @@ See [README.md](README.md) for setup, environment variables, deployment and lice
 
 ## Architecture
 
-The root layout mounts `LibraryProvider`, `TimerProvider`, `MusicProvider` and `AnatomyProvider`. These keep browser-local training state, the stopwatch/rest timer, EchoPlay playback and the shared anatomy viewer available across client-side route navigation.
+The root layout mounts `AuthProvider`, `LibraryProvider`, `TimerProvider`, `MusicProvider` and `AnatomyProvider`. Supabase Auth supplies JWT sessions; the library remounts on account changes to isolate training data. The remaining providers keep timers, EchoPlay and anatomy available across route navigation.
 
-Server routes read the bundled catalog and custom metadata. Supabase supplies shared custom exercises and admin authorization; it does not store personal workouts, notes or workout history.
+Server routes read the bundled catalog and custom metadata. Supabase supplies shared custom exercises, admin authorization and private per-user training snapshots. Personal sync uses the public client key plus the signed-in user's JWT and RLS, never the server secret.
 
 ## Routes
 
@@ -22,6 +22,7 @@ Server routes read the bundled catalog and custom metadata. Supabase supplies sh
 | `/exercise/[slug]` | Dataset/custom exercise details, photo demonstrations where available, YouTube videos, instructions, notes and anatomy. Unknown slugs use the segment's `not-found.tsx`. |
 | `/favourites` | Browser-local favourite exercises. |
 | `/timer` | Full stopwatch and rest-timer interface. |
+| `/account` | Google/email sign-in, email registration, private training sync status/retry, sign-out and JSON backup export. |
 | `/music` | EchoPlay controls, plus the separate in-progress audio-test experiment. |
 | `/spotify` | Compatibility redirect to `/music`. |
 
@@ -47,16 +48,23 @@ There is no exercise or video generation pipeline. The former generation routes,
 
 ## Personal training state
 
-`src/lib/library.tsx` stores workouts, weekly scheduling, favourites, exercise completion, completion history and personal notes in browser localStorage under `repvisual:library:v1`.
+`src/lib/library.tsx` owns workouts, weekly scheduling, favourites, exercise progress, completion history and personal notes. `use-training-sync.ts` saves a device cache immediately and debounces signed-in cloud sync by 700 ms. It also refreshes on focus, reconnect and every 30 seconds.
 
-- These records are local to the browser/origin and do not sync across devices or browsers.
+- Guests remain local. Signed-in records sync through `personal_training`, whose primary key is `auth.users.id`. `personal-training.sql` at the repository root creates the table, owner-only RLS policies and the revision-checked `save_personal_training` RPC. It must be applied in the Supabase SQL editor; it has not been applied automatically.
+- The first account on a browser claims legacy `repvisual:library:v1` and `repvisual:weekly-schedule:v1` data. Both original keys are retained. Subsequent accounts cannot import that claimed data. Per-account caches use `repvisual:library:user:<id>:v2`; signed-out use after a claim uses a separate guest cache.
+- Three-way merging combines independent changes by workout/history ID and exercise slug, respects non-conflicting deletions, and retains both versions of conflicting note/schedule text. Revision conflicts reload/merge/retry rather than replacing newer cloud data. Offline/failed sync keeps the cache and displays an error/retry action on Account.
+- A sync batch pins its JWT to the initiating user so an account switch cannot write old account data to the new account. History remains a snapshot. Timer state remains device-local.
 - Workout completion records the exercises actually marked done; partial sessions do not automatically mark every exercise complete.
 - Undoing a recorded session restores the prior exercise selection for editing.
 - Workout history contains exercise snapshots. Later custom-exercise edits update current saved metadata without rewriting old history.
 - Notes and membership remain attached to stable exercise slugs.
 - Custom metadata refresh runs on hydration and window focus. A failed strict refresh retains the existing browser snapshots.
 
-`WorkoutHeatmap.tsx` displays training history. `WeeklySchedule.tsx` manages the schedule. `QuickNotes.tsx` and the session note controls edit personal notes.
+`WorkoutHeatmap.tsx` displays training history. `SyncedWeeklySchedule.tsx` manages the shared schedule; the older `WeeklySchedule.tsx` is no longer imported. `QuickNotes.tsx` and the session note controls edit personal notes.
+
+For Google login enable the Google provider in Supabase Authentication, configure its Google OAuth client ID/secret, use the Supabase callback URL as the Google authorized redirect URI, and allow each app origin's `/account` URL in Supabase Auth redirect settings. The existing browser Supabase client manages the OAuth callback, JWT persistence and automatic refresh. Email confirmation returns to `/account` too.
+
+`node training-sync.test.cjs` tests migration/backup/isolation and merge rules. `node training-sync.test.cjs --browser` uses isolated Chrome contexts and intercepts Supabase Auth/database requests to test import, autosave, conflicts, offline recovery, account switching, Google redirect and another-device restore. These mocks do not verify live database policies or a real Google login.
 
 ## Specific muscle targets
 
@@ -112,9 +120,13 @@ Gesture recognition requires the same target and nearby pointer positions within
 
 ### Target browse ordering
 
+Browse offers a muscle-region selector and separate beginner, intermediate, advanced (including expert), and unrated/custom sections. Each initially shows up to three cards with an independent View all/Show fewer control. Text queries retain relevance ordering. `mode=browse` returns the complete catalog, and muscle browsing returns all matches so difficulty groups are not truncated by the ordinary search limit.
+
+The server caches the merged catalog for 30 seconds and reuses a Fuse index plus difficulty-sorted muscle/target lookup maps. Concurrent reads share the catalog promise. Successful custom creation/editing invalidates that server instance immediately; other instances refresh on expiry. Strict custom metadata refresh remains uncached.
+
 `byTarget` returns all exact matches without the ordinary 48-record cutoff. `sortByDifficulty` orders beginner, intermediate, advanced/expert, then custom/unrated records, preserving the prior order within a tier.
 
-The search page shows the target/order, aborts stale fetches, handles API errors and keeps newly created exercises within the active target filter. Empty results offer catalog browsing and manual creation, not generated content.
+The search page shows the target/order, aborts stale fetches, handles API errors and keeps newly created exercises within the active target filter. When no exact target records exist, the API returns all related primary-muscle exercises sorted by difficulty and includes `relatedMuscle`; browse explains that their specific region emphasis is unspecified. This fallback does not change target metadata or session-card matching. Empty results offer catalog browsing and manual creation, not generated content.
 
 ## Custom exercises and Supabase
 

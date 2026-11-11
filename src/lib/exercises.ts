@@ -50,17 +50,68 @@ async function loadRaw(): Promise<Exercise[]> {
   return list.map(normalize);
 }
 
-export async function getAllExercises(): Promise<Exercise[]> {
+async function readCatalog(): Promise<Exercise[]> {
   if (!exercisesCache) exercisesCache = await loadRaw();
   return [...await readCustomExercises(), ...exercisesCache];
+}
+
+let catalog: Promise<Exercise[]> | null = null;
+let expiresAt = 0;
+let generation = 0;
+export function invalidateExerciseCatalog(): void {
+  generation++;
+  catalog = null;
+  indexes = null;
+}
+export async function getAllExercises(): Promise<Exercise[]> {
+  if (!catalog || Date.now() >= expiresAt) {
+    invalidateExerciseCatalog();
+    expiresAt = Date.now() + 30_000;
+    const current = generation;
+    catalog = readCatalog().catch(error => {
+      if (current === generation) invalidateExerciseCatalog();
+      throw error;
+    });
+  }
+  return catalog;
+}
+
+interface CatalogIndexes {
+  fuse: Fuse<Exercise>;
+  muscles: Map<string, SearchResult[]>;
+  targets: Map<string, SearchResult[]>;
+}
+let indexes: Promise<CatalogIndexes> | null = null;
+async function getIndexes(): Promise<CatalogIndexes> {
+  const pending = getAllExercises();
+  const current = generation;
+  const all = await pending;
+  if (current !== generation) return getIndexes();
+  if (!indexes) indexes = Promise.resolve(buildIndexes(all));
+  return indexes;
+}
+function buildIndexes(all: Exercise[]): CatalogIndexes {
+  const muscles = new Map<string, SearchResult[]>();
+  const targets = new Map<string, SearchResult[]>();
+  for (const exercise of sortByDifficulty(all)) {
+    const result = toSearchResult(exercise);
+    for (const [map, keys] of [[muscles, exercise.primaryMuscles], [targets, result.targetAreas ?? []]] as const) {
+      for (const key of new Set(keys)) {
+        const bucket = map.get(key) ?? [];
+        bucket.push(result);
+        map.set(key, bucket);
+      }
+    }
+  }
+  return { fuse: createFuse(all), muscles, targets };
 }
 
 export async function getBySlug(slug: string): Promise<Exercise | null> {
   return (await getAllExercises()).find((exercise) => exercise.slug === slug) ?? null;
 }
 
-async function getFuse(): Promise<Fuse<Exercise>> {
-  return new Fuse(await getAllExercises(), {
+function createFuse(all: Exercise[]): Fuse<Exercise> {
+  return new Fuse(all, {
     keys: [
       { name: "name", weight: 0.6 },
       { name: "primaryMuscles", weight: 0.2 },
@@ -95,30 +146,22 @@ export async function searchExercises(
     const all = await getAllExercises();
     return all.slice(0, limit).map(toSearchResult);
   }
-  const fuse = await getFuse();
+  const { fuse } = await getIndexes();
   return fuse
     .search(q, { limit })
     .map((r) => toSearchResult(r.item));
 }
 
 export async function listMuscles(): Promise<string[]> {
-  const all = await getAllExercises();
-  const set = new Set<string>();
-  for (const e of all) e.primaryMuscles.forEach((m) => set.add(m));
-  return Array.from(set).sort();
+  return [...(await getIndexes()).muscles.keys()].sort();
 }
 
 export async function byMuscle(muscle: string, limit = 48): Promise<SearchResult[]> {
-  const all = await getAllExercises();
-  return all
-    .filter((e) => e.primaryMuscles.includes(muscle))
-    .slice(0, limit)
-    .map(toSearchResult);
+  return ((await getIndexes()).muscles.get(muscle) ?? []).slice(0, limit);
 }
 
 export async function byTarget(target: string): Promise<SearchResult[]> {
-  const all = await getAllExercises();
-  return sortByDifficulty(all.filter(exercise => exerciseTargets(exercise).includes(target))).map(toSearchResult);
+  return [...((await getIndexes()).targets.get(target) ?? [])];
 }
 
 export async function popularExercises(limit = 8): Promise<SearchResult[]> {

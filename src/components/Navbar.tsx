@@ -23,6 +23,7 @@ export default function Navbar() {
           </span>
           <span className="text-lg font-bold tracking-tight text-white">RepVisual<span className="ml-1 text-accent">.</span></span>
         </Link>
+        <Link href="/account" className="ml-4 inline-flex min-h-11 items-center rounded-lg border border-white/15 px-3 text-sm text-white/70">Account</Link>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 pb-2 lg:flex lg:gap-1 lg:pb-0">
         {links.map(link => {

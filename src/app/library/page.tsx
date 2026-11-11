@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import ExerciseCard from "@/components/ExerciseCard";
-import WeeklySchedule from "@/components/WeeklySchedule";
+import WeeklySchedule from "@/components/SyncedWeeklySchedule";
 import WorkoutHeatmap from "@/components/WorkoutHeatmap";
 import MuscleGuide from "@/components/MuscleGuide";
 import InlineExercisePicker from "@/components/InlineExercisePicker";

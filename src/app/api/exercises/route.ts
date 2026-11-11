@@ -1,10 +1,10 @@
 import { parseCustomExerciseInput } from "@/lib/custom-exercise-input";
 import { exerciseAccess, ExerciseStorageUnavailableError } from "@/lib/supabase-server";
 import { readCustomExercises, saveCustomExercise } from "@/lib/custom-exercises";
-import { getBySlug, slugify } from "@/lib/exercises";
+import { getBySlug, slugify, invalidateExerciseCatalog } from "@/lib/exercises";
 import type { Exercise } from "@/lib/types";
 import { NextRequest, NextResponse } from "next/server";
-import { MUSCLE_TARGETS } from "@/lib/muscle-targets";
+import { MUSCLE_TARGETS, sortByDifficulty } from "@/lib/muscle-targets";
 import {
   searchExercises,
   byMuscle,
@@ -39,14 +39,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ results: await popularExercises() });
   }
   if (target !== null) {
-    if (!MUSCLE_TARGETS.some(item => item.id === target)) {
+    const selectedTarget = MUSCLE_TARGETS.find(item => item.id === target);
+    if (!selectedTarget) {
       return NextResponse.json({ error: "Unknown muscle target." }, { status: 400 });
     }
-    return NextResponse.json({ results: await byTarget(target) });
+    const exact = await byTarget(target);
+    if (exact.length) return NextResponse.json({ results: exact });
+    // Most dataset records only identify a broad muscle. Offer related exercises
+    // without inventing precise target metadata or changing session matching.
+    const related = sortByDifficulty(await byMuscle(selectedTarget.muscle, Number.MAX_SAFE_INTEGER));
+    return NextResponse.json({ results: related, relatedMuscle: selectedTarget.muscle });
   }
   if (muscle) {
-    return NextResponse.json({ results: await byMuscle(muscle) });
+    return NextResponse.json({ results: await byMuscle(muscle, Number.MAX_SAFE_INTEGER) });
   }
+  if (mode === "browse") return NextResponse.json({ results: await searchExercises("", Number.MAX_SAFE_INTEGER) });
   return NextResponse.json({ results: await searchExercises(q) });
 }
 
@@ -71,6 +78,7 @@ export async function POST(req: NextRequest) {
       primaryMuscles, targetAreas, secondaryMuscles: [], instructions: [], imageUrls: [`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`],
     };
     const saved = await saveCustomExercise(exercise);
+    invalidateExerciseCatalog();
     return NextResponse.json({ exercise: saved }, { status: 201 });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return NextResponse.json({ error: "An exercise with this name already exists." }, { status: 409 });

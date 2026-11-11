@@ -1,6 +1,7 @@
 node_modules
 .next
 .next-production
+.next-local
 out
 .env
 .env.local

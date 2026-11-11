@@ -19,7 +19,7 @@ export default function QuickNotes({
   compact = false,
   onClose,
 }: QuickNotesProps) {
-  const { hydrated, getNote, setNote, clearNote, hasNote } = useLibrary();
+  const { hydrated, getNote, setNote, clearNote, hasNote, syncStatus, syncError } = useLibrary();
 
   const savedNote = hydrated ? getNote(exerciseSlug) : "";
   const exists = hydrated && hasNote(exerciseSlug);
@@ -55,7 +55,7 @@ export default function QuickNotes({
   }
 
   function handleClear() {
-    clearNote(exerciseSlug);
+    if (!clearNote(exerciseSlug)) { setSaveStatus("error"); return; }
     setDraft("");
     setIsEditing(true);
     setConfirmClear(false);
@@ -141,7 +141,7 @@ export default function QuickNotes({
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                 <path d="M5 13l4 4L19 7" />
               </svg>
-              Notes saved successfully to this device!
+              {syncStatus === "synced" ? "Notes synced to your account." : "Notes saved on this device."}
             </motion.div>
           )}
 
@@ -170,7 +170,7 @@ export default function QuickNotes({
 
             <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
               <span className="text-[11px] text-white/50">
-                Private notes • saved on this device
+                {syncStatus === "synced" ? "Private notes • synced to your account" : syncStatus === "syncing" ? "Private notes • syncing" : "Private notes • saved on this device"}
               </span>
 
               <div className="flex items-center gap-2">
@@ -283,6 +283,7 @@ export default function QuickNotes({
           </div>
         )}
       </div>
+      {syncError && <p role="alert" className="mt-3 text-xs text-red-300">{syncError}</p>}
     </section>
   );
 }

@@ -72,6 +72,24 @@ Keep server secrets in `.env.local` or deployment environment settings. Do not c
 
 ### Supabase setup
 
+#### Personal accounts and Google sign-in
+
+Open `/account` (the **Account** link in the header) for email sign-in/registration, Google sign-in, sync status/retry and JSON backup export. Supabase Auth issues the JWT and manages session refresh; personal training reads/writes use that user's JWT under RLS.
+
+1. Run [personal-training.sql](personal-training.sql) in the Supabase SQL editor after the existing migrations. It creates the private `personal_training` table and revision-checked save function. This repository change does not apply the script to the live database automatically.
+2. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. These existing public variables are sufficient for personal sync; the server secret is only needed for admin custom-exercise publishing.
+3. Enable email sign-in and configure email confirmation as desired in Supabase Authentication.
+4. Enable **Google** in Supabase Authentication providers and enter a Google OAuth web client ID/secret. In Google Cloud configure the consent screen and set the authorized redirect URI to the callback shown by Supabase (`https://<project-ref>.supabase.co/auth/v1/callback`). Follow the [official Google provider setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google).
+5. Add each app's exact `/account` URL to Supabase Authentication URL Configuration's redirect allow list, including `http://localhost:3001/account` for the current development server, `http://localhost:3000/account` for the default port, and your deployed origin. Set the production Site URL appropriately. The Google client secret stays in Supabase, never in the browser or repository.
+
+Sign in from the **same browser and origin** holding the existing data. The first account claims and imports that browser's workouts, exercise snapshots, favourites, notes, progress/history and schedule; existing cloud data is merged rather than replaced. Original legacy storage keys are retained. Signing out switches to a separate guest cache; another account does not receive the first account's data. Guests remain usable without an account.
+
+Changes save to a per-account device cache and sync after a short debounce, on reconnect/focus and every 30 seconds. Failed sync retains the cache. Concurrent writes use revision checks and a three-way merge; conflicting note/schedule text retains both versions. Timer and music playback remain device-local.
+
+Run `node training-sync.test.cjs` for migration/merge checks, or `node training-sync.test.cjs --browser` against the running app for mocked Auth/database browser checks. Set `TEST_BASE_URL` to change its default `http://localhost:3001`. Mocks do not verify live RLS policies or actual Google account authorization.
+
+#### Shared custom exercise publishing
+
 1. Apply the migrations in order:
    - [Create custom exercises](supabase/migrations/202611020001_custom_exercises.sql).
    - [Add primary muscles and specific targets](supabase/migrations/202611090001_custom_exercise_primary_muscles.sql).
@@ -94,7 +112,8 @@ In the app, **Create exercise** accepts a name, YouTube link, and specific targe
 | --- | --- |
 | Bundled exercise catalog | `data/exercises.json`. |
 | Custom exercise metadata | Supabase when configured, merged with bundled `data/custom/` records. Development without Supabase can save local JSON; production publishing requires Supabase. |
-| Workouts, schedule, favourites, history, notes, and timers | Browser localStorage; these records do not automatically sync between devices or domains. |
+| Workouts, schedule, favourites, progress, history and notes | Private Supabase training snapshot when signed in, plus per-account browser cache; guest data stays local. |
+| Timer and music playback | Device-local runtime/storage state. |
 | Resolved demonstration videos | `data/videos/`, with temporary runtime caching on read-only hosts. |
 | Anatomy model and previews | Self-hosted under `public/models/anatomy/`. |
 

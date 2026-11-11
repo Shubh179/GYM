@@ -1,8 +1,7 @@
 "use client";
 
-// Client-side "personal training" store: favourites + custom workout sessions.
-// Persisted to localStorage so the user's library survives reloads with no
-// backend or account. All components under <LibraryProvider> can use useLibrary().
+// Personal training store with an offline cache and authenticated cloud sync.
+// Supabase Auth scopes the cache and remounts it when accounts change.
 
 import {
   createContext,
@@ -14,7 +13,11 @@ import {
   useState,
 } from "react";
 import type { SearchResult } from "./types";
+import { usePathname } from "next/navigation";
 import { primaryMuscleOverlapWarning } from "./muscle-overlap";
+import { useAuth } from "@/components/AuthProvider";
+import { emptyTraining } from "./training-merge";
+import { useTrainingSync, type SyncStatus } from "./use-training-sync";
 
 // A saved exercise carries just enough to render a card without re-fetching.
 export type SavedExercise = SearchResult;
@@ -35,7 +38,8 @@ export interface CompletedSession {
   notes?: string;
 }
 
-interface LibraryState {
+export interface LibraryState {
+  weeklySchedule: string;
   favourites: SavedExercise[];
   workouts: Workout[];
   // Per-workout in-progress ticks: workout id -> checked exercise slugs.
@@ -55,6 +59,10 @@ interface LibraryState {
 
 interface LibraryContextValue extends LibraryState {
   hydrated: boolean;
+  syncStatus: SyncStatus;
+  syncError: string;
+  syncNow: () => Promise<void>;
+  setWeeklySchedule: (value: string) => void;
   refreshSavedExercises: (exercises: SavedExercise[]) => void;
   // Favourites
   isFavourite: (slug: string) => boolean;
@@ -82,51 +90,9 @@ interface LibraryContextValue extends LibraryState {
   clearNote: (slug: string) => boolean;
 }
 
-const STORAGE_KEY = "repvisual:library:v1";
-const EMPTY: LibraryState = {
-  favourites: [],
-  workouts: [],
-  progress: {},
-  completions: {},
-  sessionLog: {},
-  workoutHistory: {},
-  notes: {},
-};
+const EMPTY = emptyTraining();
 
 const LibraryContext = createContext<LibraryContextValue | null>(null);
-
-function loadState(): LibraryState {
-  if (typeof window === "undefined") return EMPTY;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY;
-    const parsed = JSON.parse(raw) as Partial<LibraryState>;
-    return {
-      favourites: Array.isArray(parsed.favourites) ? parsed.favourites : [],
-      workouts: Array.isArray(parsed.workouts) ? parsed.workouts : [],
-      progress:
-        parsed.progress && typeof parsed.progress === "object"
-          ? parsed.progress
-          : {},
-      completions:
-        parsed.completions && typeof parsed.completions === "object"
-          ? parsed.completions
-          : {},
-      sessionLog:
-        parsed.sessionLog && typeof parsed.sessionLog === "object"
-          ? parsed.sessionLog
-          : {},
-      workoutHistory:
-        parsed.workoutHistory && typeof parsed.workoutHistory === "object"
-          ? parsed.workoutHistory
-          : {},
-      notes:
-        parsed.notes && typeof parsed.notes === "object" ? parsed.notes : {},
-    };
-  } catch {
-    return EMPTY;
-  }
-}
 
 function newId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -144,25 +110,18 @@ export function dateToKey(d: Date = new Date()): string {
 const todayKey = dateToKey;
 
 export function LibraryProvider({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  // Legal information must be readable without sign-in or client initialization.
+  if (loading && pathname !== "/privacy-policy") return <div className="page-shell py-12 text-white/60" role="status">Loading your training...</div>;
+  return <LibraryStore key={user?.id ?? "guest"}>{children}</LibraryStore>;
+}
+
+function LibraryStore({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<LibraryState>(EMPTY);
-  const [hydrated, setHydrated] = useState(false);
+  const { hydrated, syncStatus, syncError, syncNow, persistLocal } = useTrainingSync(state, setState);
   const metadataGeneration = useRef(0);
-
-  // Load once on mount (client only), then mark hydrated.
-  useEffect(() => {
-    setState(loadState());
-    setHydrated(true);
-  }, []);
-
-  // Persist on every change after hydration.
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      // Storage full or unavailable — fail silently; feature is best-effort.
-    }
-  }, [state, hydrated]);
+  const setWeeklySchedule = useCallback((weeklySchedule: string) => setState(previous => ({ ...previous, weeklySchedule })), []);
 
   const refreshSavedExercises = useCallback((exercises: SavedExercise[]) => {
     metadataGeneration.current += 1;
@@ -476,7 +435,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         // Test and persist immediately so any QuotaExceededError is caught
         if (typeof window !== "undefined") {
           const nextState = { ...state, notes: updatedNotes };
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+          persistLocal(nextState);
         }
 
         setState((s) => {
@@ -494,7 +453,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [state]
+    [state, persistLocal]
   );
 
   const clearNote = useCallback(
@@ -504,7 +463,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           const updatedNotes = { ...(state.notes || {}) };
           delete updatedNotes[slug];
           const nextState = { ...state, notes: updatedNotes };
-          window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+          persistLocal(nextState);
         }
 
         setState((s) => {
@@ -519,13 +478,17 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
     },
-    [state]
+    [state, persistLocal]
   );
 
   const value = useMemo<LibraryContextValue>(
     () => ({
       ...state,
       hydrated,
+      syncStatus,
+      syncError,
+      syncNow,
+      setWeeklySchedule,
       refreshSavedExercises,
       isFavourite,
       toggleFavourite,
@@ -549,6 +512,10 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
     [
       state,
       hydrated,
+      syncStatus,
+      syncError,
+      syncNow,
+      setWeeklySchedule,
       refreshSavedExercises,
       isFavourite,
       toggleFavourite,
