@@ -27,7 +27,7 @@ npm run setup
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). The home route redirects to **My Training** at `/library`.
+Open [localhost:3000](http://localhost:3000). Visitors see sign-in first; signed-in users and successful logins go to **My Training** at `/library`. The header's **Account** link opens account/sync controls. Exercise browsing and the privacy policy remain publicly accessible.
 
 On Windows PowerShell, use `npm.cmd` instead of `npm` if script execution policy blocks `npm.ps1`.
 

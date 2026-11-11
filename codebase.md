@@ -16,7 +16,7 @@ Server routes read the bundled catalog and custom metadata. Supabase supplies sh
 
 | Route | Behavior |
 | --- | --- |
-| `/` | Redirects to `/library`. |
+| `/` | Authentication landing page for visitors; restored sessions go directly to `/library`. |
 | `/library` | Workout sessions, weekly schedule, progress/history, notes and anatomy previews. Sessions start collapsed and expand individually. |
 | `/search` | Fuzzy catalog search, broad-muscle filtering or exact-target browsing, with manual custom-exercise creation. |
 | `/exercise/[slug]` | Dataset/custom exercise details, photo demonstrations where available, YouTube videos, instructions, notes and anatomy. Unknown slugs use the segment's `not-found.tsx`. |
@@ -63,6 +63,8 @@ There is no exercise or video generation pipeline. The former generation routes,
 `WorkoutHeatmap.tsx` displays training history. `SyncedWeeklySchedule.tsx` manages the shared schedule; the older `WeeklySchedule.tsx` is no longer imported. `QuickNotes.tsx` and the session note controls edit personal notes.
 
 For Google login enable the Google provider in Supabase Authentication, configure its Google OAuth client ID/secret, use the Supabase callback URL as the Google authorized redirect URI, and allow each app origin's `/account` URL in Supabase Auth redirect settings. The existing browser Supabase client manages the OAuth callback, JWT persistence and automatic refresh. Email confirmation returns to `/account` too.
+
+The homepage shows authentication first. Successful email sign-in goes to `/library`; Google sign-in records a tab-local return destination and keeps the existing `/account` callback URL before forwarding to `/library`. Signed-in users can still open `/account` to manage sync and backups. Browsing and the privacy policy remain public.
 
 `node training-sync.test.cjs` tests migration/backup/isolation and merge rules. `node training-sync.test.cjs --browser` uses isolated Chrome contexts and intercepts Supabase Auth/database requests to test import, autosave, conflicts, offline recovery, account switching, Google redirect and another-device restore. These mocks do not verify live database policies or a real Google login.
 

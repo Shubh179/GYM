@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import TrainingAccount from "@/components/TrainingAccount";
 
 export default function HomePage() {
-  redirect("/library");
+  return <TrainingAccount redirectWhenSignedIn />;
 }

@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
 import { useLibrary } from "@/lib/library";
 import { browserSupabase } from "@/lib/supabase-browser";
 
-export default function TrainingAccount() {
+const SIGNIN_DESTINATION = "repvisual:signin-destination:v1";
+
+export default function TrainingAccount({ redirectWhenSignedIn = false }: { redirectWhenSignedIn?: boolean }) {
+  const router = useRouter();
   const { user, configured, error: authError } = useAuth();
   const library = useLibrary();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -20,23 +24,39 @@ export default function TrainingAccount() {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const query = new URLSearchParams(window.location.search);
     if (params.has("error") || query.has("error")) {
+      try { sessionStorage.removeItem(SIGNIN_DESTINATION); } catch { /* Storage may be disabled. */ }
       setError("Sign-in was cancelled or could not be completed. Please try again.");
       window.history.replaceState({}, "", "/account");
     }
   }, []);
+  useEffect(() => {
+    if (!user) return;
+    let pending = false;
+    try {
+      pending = sessionStorage.getItem(SIGNIN_DESTINATION) === "/library";
+      if (pending) sessionStorage.removeItem(SIGNIN_DESTINATION);
+    } catch { /* The homepage redirect also works without session storage. */ }
+    if (redirectWhenSignedIn || pending) router.replace("/library");
+  }, [user, redirectWhenSignedIn, router]);
   async function submit(event: FormEvent) {
     event.preventDefault();
     const client = browserSupabase();
     if (!client) return;
     setBusy(true); setError(""); setMessage("");
     try {
+      try { sessionStorage.setItem(SIGNIN_DESTINATION, "/library"); } catch { /* Direct email redirect remains available. */ }
       const result = mode === "signup"
         ? await client.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/account` } })
         : await client.auth.signInWithPassword({ email: email.trim(), password });
       if (result.error) throw result.error;
       setPassword("");
+      if (result.data.session) router.replace("/library");
+      else { try { sessionStorage.removeItem(SIGNIN_DESTINATION); } catch { /* No session to redirect. */ } }
       if (mode === "signup" && !result.data.session) setMessage("Check your email to confirm your account, then sign in. Your browser data will stay here until it can be imported.");
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Sign-in failed. Please try again."); }
+    } catch (cause) {
+      try { sessionStorage.removeItem(SIGNIN_DESTINATION); } catch { /* Storage may be disabled. */ }
+      setError(cause instanceof Error ? cause.message : "Sign-in failed. Please try again.");
+    }
     finally { setBusy(false); }
   }
   async function google() {
@@ -44,9 +64,13 @@ export default function TrainingAccount() {
     if (!client) return;
     setBusy(true); setError("");
     try {
+      try { sessionStorage.setItem(SIGNIN_DESTINATION, "/library"); } catch { /* Account still opens after OAuth if storage is unavailable. */ }
       const { error } = await client.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/account` } });
       if (error) throw error;
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Google sign-in failed."); setBusy(false); }
+    } catch (cause) {
+      try { sessionStorage.removeItem(SIGNIN_DESTINATION); } catch { /* Storage may be disabled. */ }
+      setError(cause instanceof Error ? cause.message : "Google sign-in failed."); setBusy(false);
+    }
   }
   async function signOut() {
     setBusy(true); setError("");
@@ -64,7 +88,7 @@ export default function TrainingAccount() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
   return <div className="page-shell py-10"><div className="mx-auto max-w-xl space-y-6">
-    <h1 className="page-title">Your account</h1>
+    <h1 className="page-title">{user ? "Your account" : mode === "signup" ? "Create your account" : "Sign in to RepVisual"}</h1>
     <p className="text-sm leading-6 text-white/60">Sign in to save your workouts, exercises, favourites, notes, weekly schedule and progress across devices. Existing data from this browser is imported into the first account you sign in to. A device backup is retained.</p>
     {(error || authError) && <p role="alert" className="rounded-lg border border-red-400/30 p-4 text-sm text-red-200">{error || authError}</p>}
     {message && <p role="status" className="text-sm text-accent">{message}</p>}

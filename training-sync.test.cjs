@@ -98,17 +98,21 @@ async function browserChecks() {
       if (!localStorage.getItem('fixture-seeded')) { localStorage.setItem(key, JSON.stringify(legacy)); localStorage.setItem(scheduleKey, 'Monday: Chest'); localStorage.setItem('fixture-seeded', '1'); }
     }, { key: LIBRARY_KEY, scheduleKey: SCHEDULE_KEY, legacy });
     const page = await context.newPage();
-    await page.goto(baseUrl + '/account', { timeout: 180000, waitUntil: 'domcontentloaded' });
+    await page.goto(baseUrl + '/', { timeout: 180000, waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Continue with Google', exact: true }).waitFor({ timeout: 120000 });
+    assert.equal(new URL(page.url()).pathname, '/', 'Visitors land on authentication');
     await page.getByLabel('Email', { exact: true }).fill('a@example.test');
     await page.getByLabel('Password', { exact: true }).fill('test-password');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.waitForURL('**/library', { timeout: 60000 });
+    await page.getByRole('link', { name: 'Account', exact: true }).click();
     await page.getByText('All changes synced to your account.', { exact: true }).waitFor({ timeout: 60000 });
     assert.equal(rows.get(ids.a).state.notes['fixture-press'], legacy.notes['fixture-press']);
     assert.deepEqual(rows.get(ids.a).state.workoutHistory, legacy.workoutHistory);
     assert.equal(rows.get(ids.a).state.weeklySchedule, 'Monday: Chest');
     assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).notes['fixture-press'], LIBRARY_KEY), legacy.notes['fixture-press']);
-    await page.getByRole('link', { name: 'Back to training', exact: true }).click();
+    await page.goto(baseUrl + '/');
+    await page.waitForURL('**/library', { timeout: 60000 });
     const schedule = page.getByLabel('Monday to Sunday schedule'); await schedule.waitFor({ timeout: 120000 });
     await page.getByRole('button', { name: 'Expand Chest', exact: true }).click();
     await page.getByRole('button', { name: 'View personal notes for Fixture press', exact: true }).click();
@@ -134,6 +138,8 @@ async function browserChecks() {
     await page.getByLabel('Email', { exact: true }).fill('b@example.test');
     await page.getByLabel('Password', { exact: true }).fill('test-password');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await page.waitForURL('**/library', { timeout: 60000 });
+    await page.getByRole('link', { name: 'Account', exact: true }).click();
     await page.getByText('All changes synced to your account.', { exact: true }).waitFor();
     assert.equal(rows.get(ids.b).state.workouts.length, 0);
     assert.deepEqual(rows.get(ids.b).state.notes, {});
@@ -141,12 +147,16 @@ async function browserChecks() {
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
     await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
     await page.waitForURL('**/auth/v1/authorize?**'); assert(googleRequested);
+    await page.goto(baseUrl + '/account#access_token=' + token(ids.a) + '&token_type=bearer&expires_in=3600&refresh_token=fake-refresh');
+    await page.waitForURL('**/library', { timeout: 60000 });
     await context.close();
     const other = await browser.newContext(); await setup(other);
     const second = await other.newPage(); await second.goto(baseUrl + '/account');
     await second.getByLabel('Email', { exact: true }).fill('a@example.test');
     await second.getByLabel('Password', { exact: true }).fill('test-password');
     await second.getByRole('button', { name: 'Sign in', exact: true }).click();
+    await second.waitForURL('**/library', { timeout: 60000 });
+    await second.getByRole('link', { name: 'Account', exact: true }).click();
     try { await second.getByText('All changes synced to your account.', { exact: true }).waitFor({ timeout: 60000 }); }
     catch (error) { console.error('Second-device UI:', await second.locator('main').innerText()); throw error; }
     assert.equal(await second.evaluate(id => JSON.parse(localStorage.getItem(`repvisual:library:user:${id}:v2`)).state.weeklySchedule, ids.a), 'Monday: Updated training');
