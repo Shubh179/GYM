@@ -364,7 +364,6 @@ function WorkoutBlock({
 
                       <button
                         onClick={() => toggleExerciseDone(workout.id, ex.slug)}
-                        disabled={sessionDone}
                         title={sessionDone ? "Undo session completion to edit recorded exercises" : undefined}
                         aria-label={
                           checked

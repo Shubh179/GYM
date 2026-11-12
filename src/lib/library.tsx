@@ -15,6 +15,7 @@ import {
 import type { SearchResult } from "./types";
 import { usePathname } from "next/navigation";
 import { primaryMuscleOverlapWarning } from "./muscle-overlap";
+import { toggleWorkoutExercise, undoRecordedSession } from "./workout-completion";
 import { useAuth } from "@/components/AuthProvider";
 import { emptyTraining } from "./training-merge";
 import { useTrainingSync, type SyncStatus } from "./use-training-sync";
@@ -263,53 +264,10 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
   // and reset the ticks so the same session can be completed again tomorrow.
   const toggleExerciseDone = useCallback(
     (workoutId: string, slug: string) => {
-      setState((s) => {
-        const workout = s.workouts.find((w) => w.id === workoutId);
-        if (!workout) return s;
-
-        const current = s.progress[workoutId] ?? [];
-        const checked = current.includes(slug)
-          ? current.filter((x) => x !== slug)
-          : [...current, slug];
-
-        const allSlugs = workout.exercises.map((e) => e.slug);
-        const complete =
-          allSlugs.length > 0 && allSlugs.every((sl) => checked.includes(sl));
-
-        if (complete) {
-          const key = todayKey();
-          const todays = s.sessionLog[key] ?? [];
-          // Already logged this session today — just clear the ticks, don't
-          // double-count on the heatmap.
-          if (todays.includes(workoutId)) {
-            return { ...s, progress: { ...s.progress, [workoutId]: [] } };
-          }
-          // Save a snapshot of the completed session to workoutHistory.
-          const session: CompletedSession = {
-            id: newId(),
-            workoutId,
-            workoutName: workout.name,
-            exercises: [...workout.exercises],
-            completedAt: new Date().toISOString(),
-          };
-          const existingHistory = s.workoutHistory[key] ?? [];
-          return {
-            ...s,
-            progress: { ...s.progress, [workoutId]: [] },
-            sessionLog: { ...s.sessionLog, [key]: [...todays, workoutId] },
-            completions: {
-              ...s.completions,
-              [key]: (s.completions[key] ?? 0) + 1,
-            },
-            workoutHistory: {
-              ...s.workoutHistory,
-              [key]: [...existingHistory, session],
-            },
-          };
-        }
-
-        return { ...s, progress: { ...s.progress, [workoutId]: checked } };
-      });
+      const date = todayKey();
+      const id = newId();
+      const completedAt = new Date().toISOString();
+      setState(s => toggleWorkoutExercise(s, workoutId, slug, date, id, completedAt));
     },
     []
   );
@@ -332,44 +290,7 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
         const already = todays.includes(workoutId);
         const workout = s.workouts.find((w) => w.id === workoutId);
 
-        if (already) {
-          // --- Undo completion ---
-          const nextList = todays.filter((id) => id !== workoutId);
-          const sessionLog = { ...s.sessionLog };
-          if (nextList.length) sessionLog[key] = nextList;
-          else delete sessionLog[key];
-
-          const completions = { ...s.completions };
-          const next = (completions[key] ?? 0) - 1;
-          if (next > 0) completions[key] = next;
-          else delete completions[key];
-
-          // Remove the most recent history entry for this workout on this day.
-          const existingHistory = s.workoutHistory[key] ?? [];
-          let removeIdx = -1;
-          for (let i = existingHistory.length - 1; i >= 0; i--) {
-            if (existingHistory[i].workoutId === workoutId) {
-              removeIdx = i;
-              break;
-            }
-          }
-          const updatedHistory =
-            removeIdx >= 0
-              ? [
-                  ...existingHistory.slice(0, removeIdx),
-                  ...existingHistory.slice(removeIdx + 1),
-                ]
-              : existingHistory;
-          const workoutHistory = { ...s.workoutHistory };
-          if (updatedHistory.length) workoutHistory[key] = updatedHistory;
-          else delete workoutHistory[key];
-
-          const restored = removeIdx >= 0
-            ? existingHistory[removeIdx].exercises.map((ex) => ex.slug)
-            : [];
-          return { ...s, sessionLog, completions, workoutHistory,
-            progress: { ...s.progress, [workoutId]: restored } };
-        }
+        if (already) return undoRecordedSession(s, workoutId, key);
 
         // --- Complete session ---
         if (!workout) return s;

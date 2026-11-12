@@ -56,6 +56,7 @@ There is no exercise or video generation pipeline. The former generation routes,
 - A sync batch pins its JWT to the initiating user so an account switch cannot write old account data to the new account. History remains a snapshot. Timer state remains device-local.
 - Workout completion records the exercises actually marked done; partial sessions do not automatically mark every exercise complete.
 - Undoing a recorded session restores the prior exercise selection for editing.
+- Exercise completion buttons remain editable after recording a session. Changing one first restores the recorded selection and removes that session's current-day history/heatmap entry, then toggles the selected exercise. Other checked exercises remain selected; completing the selection again records one session without duplication. `workout-completion.ts` owns these transitions; `node workout-completion.test.cjs` checks completion/undo/recheck and partial sessions.
 - Workout history contains exercise snapshots. Later custom-exercise edits update current saved metadata without rewriting old history.
 - Notes and membership remain attached to stable exercise slugs.
 - Custom metadata refresh runs on hydration and window focus. A failed strict refresh retains the existing browser snapshots.
