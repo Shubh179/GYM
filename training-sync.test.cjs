@@ -110,7 +110,7 @@ async function browserChecks() {
     await page.getByLabel('Password', { exact: true }).fill('test-password');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.waitForURL('**/library', { timeout: 60000 });
-    await page.getByRole('link', { name: 'Account', exact: true }).click();
+    await page.goto(baseUrl + '/account');
     await page.getByText('All changes synced to your account.', { exact: true }).waitFor({ timeout: 60000 });
     assert.equal(rows.get(ids.a).state.notes['fixture-press'], legacy.notes['fixture-press']);
     assert.deepEqual(rows.get(ids.a).state.workoutHistory, legacy.workoutHistory);
@@ -128,7 +128,7 @@ async function browserChecks() {
     await notes.getByRole('button', { name: 'Close notes', exact: true }).click();
     conflict = true; await schedule.fill('Monday: Updated training');
     await page.waitForTimeout(2500);
-    await page.getByRole('link', { name: 'Account', exact: true }).click();
+    await page.goto(baseUrl + '/account');
     await page.getByText('All changes synced to your account.', { exact: true }).waitFor({ timeout: 60000 });
     assert.equal(rows.get(ids.a).state.weeklySchedule, 'Monday: Updated training');
     assert.equal(rows.get(ids.a).state.notes['remote-note'], 'Concurrent remote note');
@@ -145,7 +145,7 @@ async function browserChecks() {
     await page.getByLabel('Password', { exact: true }).fill('test-password');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
     await page.waitForURL('**/library', { timeout: 60000 });
-    await page.getByRole('link', { name: 'Account', exact: true }).click();
+    await page.goto(baseUrl + '/account');
     await page.getByText('All changes synced to your account.', { exact: true }).waitFor();
     assert.equal(rows.get(ids.b).state.workouts.length, 0);
     assert.deepEqual(rows.get(ids.b).state.notes, {});
@@ -165,7 +165,7 @@ async function browserChecks() {
     await second.getByLabel('Password', { exact: true }).fill('test-password');
     await second.getByRole('button', { name: 'Sign in', exact: true }).click();
     await second.waitForURL('**/library', { timeout: 60000 });
-    await second.getByRole('link', { name: 'Account', exact: true }).click();
+    await second.goto(baseUrl + '/account');
     try { await second.getByText('All changes synced to your account.', { exact: true }).waitFor({ timeout: 60000 }); }
     catch (error) { console.error('Second-device UI:', await second.locator('main').innerText()); throw error; }
     assert.equal(await second.evaluate(id => JSON.parse(localStorage.getItem(`repvisual:library:user:${id}:v2`)).state.weeklySchedule, ids.a), 'Monday: Updated training');

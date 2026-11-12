@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import PrivacyReturnLink from "@/components/PrivacyReturnLink";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | RepVisual",
@@ -57,7 +57,7 @@ export default function PrivacyPolicyPage() {
         <p>{contact ? <>For privacy questions or data requests, email <a className="break-all text-accent underline" href={`mailto:${contact}`}>{contact}</a>.</> : <>For privacy questions or data requests, contact the app developer using the user support email displayed on the RepVisual Google sign-in consent screen.</>} Do not send passwords or authentication tokens.</p>
         <p>This page may be updated as app features or service providers change. The effective date above identifies the current version.</p>
       </section>
-      <Link href="/library" className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4 font-semibold text-white">Back to RepVisual</Link>
+      <PrivacyReturnLink className="inline-flex min-h-11 items-center rounded-lg border border-white/20 px-4 font-semibold text-white" />
     </div>
   </article>;
 }

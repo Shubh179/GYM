@@ -27,7 +27,7 @@ npm run setup
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Visitors see sign-in first; signed-in users and successful logins go to **My Training** at `/library`. The header's **Account** link opens account/sync controls. All app pages and APIs require sign-in. Only login, its `/account` callback and the privacy policy are public; necessary framework assets remain accessible.
+Open [localhost:3000](http://localhost:3000). Visitors see sign-in first; signed-in users and successful logins go to **My Training** at `/library`. The header offers **Log out**. The privacy page shows **Back** for signed-in users and **Sign in** otherwise. All app pages and APIs require sign-in. Only login, its `/account` callback and the privacy policy are public; necessary framework assets remain accessible.
 
 On Windows PowerShell, use `npm.cmd` instead of `npm` if script execution policy blocks `npm.ps1`.
 

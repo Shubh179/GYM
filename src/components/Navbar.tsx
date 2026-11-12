@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useTimer } from "@/lib/timer";
+import { browserSupabase } from "@/lib/supabase-browser";
+import { writeAuthCookie } from "@/lib/auth-cookie";
 
 const links = [
   { href: "/library", label: "My Training", icon: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" },
@@ -13,7 +16,24 @@ const links = [
 ];
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const { hydrated, hasActiveTimer } = useTimer();
+  async function logOut() {
+    setLoggingOut(true);
+    setLogoutError("");
+    try {
+      const client = browserSupabase();
+      if (!client) throw Error("Sign-in unavailable");
+      const { error } = await client.auth.signOut({ scope: "local" });
+      if (error) throw error;
+      writeAuthCookie(null);
+      router.replace("/");
+    } catch {
+      setLogoutError("Could not log out. Please try again.");
+    } finally { setLoggingOut(false); }
+  }
   return <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-950/95 backdrop-blur-md">
     <div className="page-shell lg:flex lg:h-[76px] lg:items-center lg:justify-between lg:gap-8">
       <div className="app-brand-row flex h-16 items-center justify-between lg:h-auto">
@@ -23,7 +43,7 @@ export default function Navbar() {
           </span>
           <span className="text-lg font-bold tracking-tight text-white">RepVisual<span className="ml-1 text-accent">.</span></span>
         </Link>
-        <Link href="/account" className="ml-4 inline-flex min-h-11 items-center rounded-lg border border-white/15 px-3 text-sm text-white/70">Account</Link>
+        <button type="button" disabled={loggingOut} onClick={() => void logOut()} className="ml-4 inline-flex min-h-11 items-center rounded-lg border border-white/15 px-3 text-sm text-white/70 transition hover:border-white/30 hover:text-white disabled:opacity-50">{loggingOut ? "Logging out..." : "Log out"}</button>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 pb-2 lg:flex lg:gap-1 lg:pb-0">
         {links.map(link => {
@@ -37,5 +57,6 @@ export default function Navbar() {
         })}
       </nav>
     </div>
+    {logoutError && <p role="alert" className="page-shell pb-3 text-sm text-red-300">{logoutError}</p>}
   </header>;
 }
