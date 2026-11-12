@@ -118,6 +118,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
 }
 
 function LibraryStore({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
   const [state, setState] = useState<LibraryState>(EMPTY);
   const { hydrated, syncStatus, syncError, syncNow, persistLocal } = useTrainingSync(state, setState);
   const metadataGeneration = useRef(0);
@@ -141,7 +142,7 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !user) return;
     let active = true;
     const controller = new AbortController();
     async function refresh() {
@@ -156,7 +157,7 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
     void refresh();
     window.addEventListener("focus", refresh);
     return () => { active = false; controller.abort(); window.removeEventListener("focus", refresh); };
-  }, [hydrated, refreshSavedExercises]);
+  }, [hydrated, user, refreshSavedExercises]);
 
   const isFavourite = useCallback(
     (slug: string) => state.favourites.some((f) => f.slug === slug),

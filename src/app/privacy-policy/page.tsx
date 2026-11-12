@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
       </section>
       <section className="space-y-3" aria-labelledby="privacy-storage">
         <h2 id="privacy-storage" className="text-xl font-semibold text-white">Browser storage and cloud sync</h2>
-        <p>Without signing in, training records are stored in your browser’s local storage. When you sign in and account sync is available, training records are saved to Supabase under your account. The app also retains a device cache so changes can be kept while a connection is unavailable.</p>
+        <p>Sign-in is required to use the exercise browser and training features. When account sync is available, training records are saved to Supabase under your account. The app also retains a device cache so changes can be kept while a connection is unavailable. Records saved before sign-in became required can remain in legacy browser storage until imported or removed.</p>
         <p>The first account you sign in to on a browser can import that browser’s existing training records. The original browser copy is retained as a migration backup. Later accounts on that browser use separate caches. Signing out does not erase device caches or the migration backup; clear the site’s browser data to remove those local copies.</p>
         <p>Authentication uses stored session credentials so you can remain signed in. Timer state and music playback are device-local. Third-party embeds may use their own cookies or storage.</p>
       </section>
@@ -44,7 +44,7 @@ export default function PrivacyPolicyPage() {
       </section>
       <section className="space-y-3" aria-labelledby="privacy-control">
         <h2 id="privacy-control" className="text-xl font-semibold text-white">Your choices, retention and deletion</h2>
-        <p>You can use the exercise browser without signing in, edit or remove saved items through the app, and export your current training records from the Account page. Removing a saved workout does not automatically remove previously recorded workout history. Account records are retained to provide your saved library unless removed through available controls or through a deletion request.</p>
+        <p>You can read this policy without signing in. Once signed in, you can edit or remove saved items through the app and export your current training records from the Account page. Removing a saved workout does not automatically remove previously recorded workout history. Account records are retained to provide your saved library unless removed through available controls or through a deletion request.</p>
         <p>To request access, correction or deletion of your account and cloud training records, contact the app developer as described below. Account deletion is not currently offered as a self-service button. Device backups must also be removed by clearing the site’s browser data. Service providers may retain operational backups and logs according to their own retention practices.</p>
         <p>You can revoke Google access through your <a href="https://myaccount.google.com/connections" className="text-accent underline">Google Account connections settings</a>. Revoking Google access does not by itself delete training records already saved to your RepVisual account.</p>
       </section>

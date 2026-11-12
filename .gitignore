@@ -2,6 +2,7 @@ node_modules
 .next
 .next-production
 .next-local
+.next-auth-test
 out
 .env
 .env.local

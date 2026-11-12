@@ -93,12 +93,17 @@ async function browserChecks() {
   }
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    context.setDefaultTimeout(60000);
+    context.setDefaultNavigationTimeout(180000);
     await setup(context);
     await context.addInitScript(({ key, scheduleKey, legacy }) => {
       if (!localStorage.getItem('fixture-seeded')) { localStorage.setItem(key, JSON.stringify(legacy)); localStorage.setItem(scheduleKey, 'Monday: Chest'); localStorage.setItem('fixture-seeded', '1'); }
     }, { key: LIBRARY_KEY, scheduleKey: SCHEDULE_KEY, legacy });
     const page = await context.newPage();
-    await page.goto(baseUrl + '/', { timeout: 180000, waitUntil: 'domcontentloaded' });
+    // A stale/forged cookie must return to login, and a subsequent real sign-in
+    // must establish a fresh cookie without requiring a manual page reload.
+    await context.addCookies([{ name: 'repvisual-access-token', value: 'forged-token', url: baseUrl }]);
+    await page.goto(baseUrl + '/library', { timeout: 180000, waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Continue with Google', exact: true }).waitFor({ timeout: 120000 });
     assert.equal(new URL(page.url()).pathname, '/', 'Visitors land on authentication');
     await page.getByLabel('Email', { exact: true }).fill('a@example.test');
@@ -135,6 +140,7 @@ async function browserChecks() {
     await page.getByRole('button', { name: 'Sync now', exact: true }).click();
     await page.getByText('All changes synced to your account.', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.waitForURL(baseUrl + '/');
     await page.getByLabel('Email', { exact: true }).fill('b@example.test');
     await page.getByLabel('Password', { exact: true }).fill('test-password');
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
@@ -145,12 +151,15 @@ async function browserChecks() {
     assert.deepEqual(rows.get(ids.b).state.notes, {});
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.waitForURL(baseUrl + '/');
     await page.getByRole('button', { name: 'Continue with Google', exact: true }).click();
     await page.waitForURL('**/auth/v1/authorize?**'); assert(googleRequested);
     await page.goto(baseUrl + '/account#access_token=' + token(ids.a) + '&token_type=bearer&expires_in=3600&refresh_token=fake-refresh');
     await page.waitForURL('**/library', { timeout: 60000 });
     await context.close();
-    const other = await browser.newContext(); await setup(other);
+    const other = await browser.newContext();
+    other.setDefaultTimeout(60000); other.setDefaultNavigationTimeout(180000);
+    await setup(other);
     const second = await other.newPage(); await second.goto(baseUrl + '/account');
     await second.getByLabel('Email', { exact: true }).fill('a@example.test');
     await second.getByLabel('Password', { exact: true }).fill('test-password');

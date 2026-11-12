@@ -77,6 +77,7 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
     try {
       const result = await browserSupabase()?.auth.signOut({ scope: "local" });
       if (result?.error) throw result.error;
+      router.replace("/");
     } catch { setError("Could not sign out. Please try again."); }
     finally { setBusy(false); }
   }
@@ -92,7 +93,7 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
     <p className="text-sm leading-6 text-white/60">Sign in to save your workouts, exercises, favourites, notes, weekly schedule and progress across devices. Existing data from this browser is imported into the first account you sign in to. A device backup is retained.</p>
     {(error || authError) && <p role="alert" className="rounded-lg border border-red-400/30 p-4 text-sm text-red-200">{error || authError}</p>}
     {message && <p role="status" className="text-sm text-accent">{message}</p>}
-    {!configured ? <p className="rounded-xl border border-white/10 p-5 text-white/60">Account sync needs Supabase configuration. Your training is saved on this device.</p> : user ? <section className="space-y-4 rounded-xl border border-white/10 bg-ink-850 p-5">
+    {!configured ? <p className="rounded-xl border border-white/10 p-5 text-white/60">Sign-in is not configured. Please contact the app administrator.</p> : user ? <section className="space-y-4 rounded-xl border border-white/10 bg-ink-850 p-5">
       <p className="break-all text-sm">Signed in as {user.email ?? "your account"}</p>
       <p role="status" className="text-sm text-white/70">{library.syncStatus === "synced" ? "All changes synced to your account." : library.syncStatus === "syncing" ? "Syncing your training..." : library.syncStatus === "error" ? "Sync needs attention." : "Saved on this device."}</p>
       {library.syncError && <p role="alert" className="text-sm text-red-200">{library.syncError}</p>}
@@ -112,6 +113,6 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
       <button disabled={busy} className={`${button} w-full`} onClick={() => { setMode(mode === "signup" ? "signin" : "signup"); setMessage(""); setError(""); }}>{mode === "signin" ? "Create an account instead" : "Already have an account? Sign in"}</button>
     </section>}
     {!user && library.syncError && <p role="alert" className="text-sm text-red-200">{library.syncError}</p>}
-    <div className="flex flex-wrap gap-3"><button className={button} onClick={exportBackup}>Export training backup</button><Link className={`${button} inline-flex items-center`} href="/library">Back to training</Link></div>
+    {user && <div className="flex flex-wrap gap-3"><button className={button} onClick={exportBackup}>Export training backup</button><Link className={`${button} inline-flex items-center`} href="/library">Back to training</Link></div>}
   </div></div>;
 }

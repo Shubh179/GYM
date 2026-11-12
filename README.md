@@ -2,7 +2,7 @@
 
 A gym exercise browser and training planner with movement demonstrations, specific muscle targets, and on-demand 3D anatomy.
 
-The bundled dataset contains **876 exercises**, including **873 with start/finish photo pairs**. Core browsing, workouts, notes, and timers work without API keys.
+The bundled dataset contains **876 exercises**, including **873 with start/finish photo pairs**. Supabase sign-in is required to use the app; exercise media does not require a generation API key.
 
 Exercises come from the bundled catalog and manually created custom records. Missing exercises show a normal not-found page; search does not generate new exercises.
 
@@ -27,11 +27,11 @@ npm run setup
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Visitors see sign-in first; signed-in users and successful logins go to **My Training** at `/library`. The header's **Account** link opens account/sync controls. Exercise browsing and the privacy policy remain publicly accessible.
+Open [localhost:3000](http://localhost:3000). Visitors see sign-in first; signed-in users and successful logins go to **My Training** at `/library`. The header's **Account** link opens account/sync controls. All app pages and APIs require sign-in. Only login, its `/account` callback and the privacy policy are public; necessary framework assets remain accessible.
 
 On Windows PowerShell, use `npm.cmd` instead of `npm` if script execution policy blocks `npm.ps1`.
 
-No environment file is needed for core browsing. For optional integrations, copy [.env.example](.env.example) to `.env.local`, fill in the relevant values, and restart the server.
+Copy [.env.example](.env.example) to `.env.local`, configure the public Supabase URL and publishable key for required sign-in, and restart the server. See Supabase setup below for account storage and Google login. YouTube and music integration keys remain optional.
 
 ## Using anatomy navigation
 
@@ -82,7 +82,11 @@ Open `/account` (the **Account** link in the header) for email sign-in/registrat
 4. Enable **Google** in Supabase Authentication providers and enter a Google OAuth web client ID/secret. In Google Cloud configure the consent screen and set the authorized redirect URI to the callback shown by Supabase (`https://<project-ref>.supabase.co/auth/v1/callback`). Follow the [official Google provider setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google).
 5. Add each app's exact `/account` URL to Supabase Authentication URL Configuration's redirect allow list, including `http://localhost:3001/account` for the current development server, `http://localhost:3000/account` for the default port, and your deployed origin. Set the production Site URL appropriately. The Google client secret stays in Supabase, never in the browser or repository.
 
-Sign in from the **same browser and origin** holding the existing data. The first account claims and imports that browser's workouts, exercise snapshots, favourites, notes, progress/history and schedule; existing cloud data is merged rather than replaced. Original legacy storage keys are retained. Signing out switches to a separate guest cache; another account does not receive the first account's data. Guests remain usable without an account.
+Sign in from the **same browser and origin** holding the existing data. The first account claims and imports that browser's workouts, exercise snapshots, favourites, notes, progress/history and schedule; existing cloud data is merged rather than replaced. Original legacy storage keys are retained. Signing out removes access to app navigation and data export, returns to the login homepage, and leaves per-account caches intact for the next sign-in. Another account does not receive the first account's data.
+
+`src/middleware.ts` validates the access token with Supabase before protected page, API and model requests proceed. Pages redirect to login when unauthenticated; APIs return 401. The browser mirrors its short-lived access token in a Secure-on-HTTPS, SameSite=Lax cookie for these server checks, while the existing Supabase client continues to manage token refresh. Invalid tokens are rejected and auth outages fail closed. `AuthGate.tsx` also hides protected cached UI when sessions end.
+
+Run `node auth-guard.test.cjs` for the middleware boundary tests, or `node auth-guard.test.cjs --browser` to start an isolated local app/auth fixture and exercise direct-link restrictions, API rejection, public legal content, email/Google login, sync and logout. Existing mocked signed-in browser tests need this fixture because browser-only mocks cannot intercept server-side token verification.
 
 Changes save to a per-account device cache and sync after a short debounce, on reconnect/focus and every 30 seconds. Failed sync retains the cache. Concurrent writes use revision checks and a three-way merge; conflicting note/schedule text retains both versions. Timer and music playback remain device-local.
 
@@ -112,7 +116,7 @@ In the app, **Create exercise** accepts a name, YouTube link, and specific targe
 | --- | --- |
 | Bundled exercise catalog | `data/exercises.json`. |
 | Custom exercise metadata | Supabase when configured, merged with bundled `data/custom/` records. Development without Supabase can save local JSON; production publishing requires Supabase. |
-| Workouts, schedule, favourites, progress, history and notes | Private Supabase training snapshot when signed in, plus per-account browser cache; guest data stays local. |
+| Workouts, schedule, favourites, progress, history and notes | Private Supabase training snapshot plus per-account browser cache; legacy browser records are retained for migration. |
 | Timer and music playback | Device-local runtime/storage state. |
 | Resolved demonstration videos | `data/videos/`, with temporary runtime caching on read-only hosts. |
 | Anatomy model and previews | Self-hosted under `public/models/anatomy/`. |
