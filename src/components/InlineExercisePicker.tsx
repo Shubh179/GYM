@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
 import AddExerciseForm from "./AddExerciseForm";
@@ -236,14 +237,19 @@ export default function InlineExercisePicker({
                       : "border-white/10 bg-ink-850 hover:border-white/20 hover:bg-ink-800"
                   }`}
                 >
-                  <div className="flex min-w-0 items-center gap-2.5">
+                  <Link
+                    href={`/exercise/${encodeURIComponent(ex.slug)}`}
+                    prefetch={false}
+                    aria-label={`View ${ex.name}`}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg transition hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+                  >
                     {/* Thumbnail */}
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-ink-700">
                       {ex.thumbUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={ex.thumbUrl}
-                          alt={ex.name}
+                          alt=""
                           loading="lazy"
                           className="h-full w-full object-cover"
                         />
@@ -267,7 +273,7 @@ export default function InlineExercisePicker({
                         {ex.level}
                       </span>
                     </div>
-                  </div>
+                  </Link>
 
                   {/* Add / Added Button */}
                   <div className="shrink-0">
@@ -286,6 +292,7 @@ export default function InlineExercisePicker({
                       </span>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => addToWorkout(workout.id, ex)}
                         className="inline-flex min-h-11 items-center gap-1 rounded-lg bg-accent px-2.5 py-1.5 text-xs font-bold text-ink-950 transition hover:bg-accent-soft"
                       >
