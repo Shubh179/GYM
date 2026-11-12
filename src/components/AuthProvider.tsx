@@ -25,11 +25,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     });
     if (recovering) {
       writeAuthCookie(null);
-      void client.auth.signOut({ scope: "local" }).catch(() => {}).finally(() => {
+      // An expired/rejected access token may still have a valid refresh token.
+      // Let Supabase rotate it instead of deleting a recoverable session.
+      void client.auth.refreshSession().then(({ data, error }) => {
         if (!active) return;
         recovering = false;
         window.history.replaceState({}, "", "/");
-        setState({ user: null, loading: false, configured: true, error: "Your session is no longer valid. Please sign in again." });
+        if (error || !data.session) {
+          setState({ user: null, loading: false, configured: true, error: error && [400, 401, 403].includes(error.status ?? 0)
+            ? "Your session has ended. Please sign in again." : "Could not restore your session. Check your connection and reload." });
+          return;
+        }
+        writeAuthCookie(data.session);
+        setState({ user: data.session.user, loading: false, configured: true, error: "" });
+      }).catch(() => {
+        if (!active) return;
+        recovering = false;
+        window.history.replaceState({}, "", "/");
+        setState({ user: null, loading: false, configured: true, error: "Could not restore your session. Check your connection and reload." });
       });
       return () => { active = false; subscription.unsubscribe(); };
     }
