@@ -97,12 +97,12 @@ async function browserChecks() {
     context.setDefaultTimeout(60000);
     const page = await context.newPage();
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout: 300000 });
-    await page.getByRole('heading', { name: 'Sign in to RepVisual', exact: true }).waitFor({ timeout: 60000 });
+    await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor({ timeout: 60000 });
     assert.equal(await page.getByRole('navigation', { name: 'Main navigation' }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Export training backup' }).count(), 0);
     for (const path of ['/library', '/search', '/favourites', '/timer', '/music', '/exercise/fixture']) {
       await page.goto(baseUrl + path, { waitUntil: 'domcontentloaded', timeout: 60000 });
-      await page.getByRole('heading', { name: 'Sign in to RepVisual', exact: true }).waitFor();
+      await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor();
       assert.equal(new URL(page.url()).pathname, '/');
     }
     for (const path of ['/api/exercises', '/api/exercise/fixture', '/api/music-test']) {
@@ -110,7 +110,7 @@ async function browserChecks() {
     }
     await context.addCookies([{ name: AUTH_COOKIE, value: 'forged-token', url: baseUrl }]);
     await page.goto(baseUrl + '/library');
-    await page.getByRole('heading', { name: 'Sign in to RepVisual', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Sign in', exact: true }).waitFor();
     assert.equal(await page.getByRole('navigation', { name: 'Main navigation' }).count(), 0);
     const legal = await browser.newContext({ javaScriptEnabled: false });
     const policy = await legal.newPage();

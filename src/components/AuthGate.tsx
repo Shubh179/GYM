@@ -32,6 +32,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
   // No app navigation, timer, music iframe or anatomy renderer for visitors.
   // Legal information is server-rendered even before auth initializes.
+  if (!user && pathname !== "/privacy-policy") return <main>{children}</main>;
   if (!user || pathname === "/privacy-policy") return <>
     <header className="page-shell flex min-h-20 items-center justify-between border-b border-white/10">
       <Link href="/" className="text-xl font-bold text-white">RepVisual<span className="text-accent">.</span></Link>
