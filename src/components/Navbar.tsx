@@ -1,39 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { useTimer } from "@/lib/timer";
-import { browserSupabase } from "@/lib/supabase-browser";
-import { writeAuthCookie } from "@/lib/auth-cookie";
 
 const links = [
   { href: "/library", label: "My Training", icon: "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z" },
   { href: "/search", label: "Browse", icon: "M21 21l-5-5M18 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0" },
   { href: "/favourites", label: "Favourites", icon: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8" },
   { href: "/timer", label: "Timer", icon: "M9 2h6M12 8v5l3 2M20 13a8 8 0 1 1-16 0 8 8 0 0 1 16 0" },
-  { href: "/music", label: "Music", icon: "M9 18V5l12-2v13M9 18a3 3 0 1 1-3-3h3M21 16a3 3 0 1 1-3-3h3" },
+  { href: "/profile", label: "Profile", icon: "M20 21v-2a7 7 0 0 0-14 0v2M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0" },
 ];
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [logoutError, setLogoutError] = useState("");
   const { hydrated, hasActiveTimer } = useTimer();
-  async function logOut() {
-    setLoggingOut(true);
-    setLogoutError("");
-    try {
-      const client = browserSupabase();
-      if (!client) throw Error("Sign-in unavailable");
-      const { error } = await client.auth.signOut({ scope: "local" });
-      if (error) throw error;
-      writeAuthCookie(null);
-      router.replace("/");
-    } catch {
-      setLogoutError("Could not log out. Please try again.");
-    } finally { setLoggingOut(false); }
-  }
   return <header className="sticky top-0 z-40 border-b border-white/10 bg-ink-950/95 backdrop-blur-md">
     <div className="page-shell lg:flex lg:h-[76px] lg:items-center lg:justify-between lg:gap-8">
       <div className="app-brand-row flex h-16 items-center justify-between lg:h-auto">
@@ -43,7 +23,6 @@ export default function Navbar() {
           </span>
           <span className="text-lg font-bold tracking-tight text-white">RepVisual<span className="ml-1 text-accent">.</span></span>
         </Link>
-        <button type="button" disabled={loggingOut} onClick={() => void logOut()} className="ml-4 inline-flex min-h-11 items-center rounded-lg border border-white/15 px-3 text-sm text-white/70 transition hover:border-white/30 hover:text-white disabled:opacity-50">{loggingOut ? "Logging out..." : "Log out"}</button>
       </div>
       <nav aria-label="Main navigation" className="grid grid-cols-5 gap-1 pb-2 lg:flex lg:gap-1 lg:pb-0">
         {links.map(link => {
@@ -57,6 +36,5 @@ export default function Navbar() {
         })}
       </nav>
     </div>
-    {logoutError && <p role="alert" className="page-shell pb-3 text-sm text-red-300">{logoutError}</p>}
   </header>;
 }

@@ -14,7 +14,7 @@ export default function PrivacyPolicyPage() {
       <header className="space-y-3 border-b border-white/10 pb-6">
         <p className="font-semibold text-accent">RepVisual</p>
         <h1 className="page-title text-white">Privacy Policy</h1>
-        <p>Effective date: November 11, 2026</p>
+        <p>Effective date: November 13, 2026</p>
         <p>RepVisual is an exercise browser and personal training planner. This policy explains how the app accesses, uses, stores and shares information when you browse exercises, sign in or save training records.</p>
       </header>
       <section className="space-y-3" aria-labelledby="privacy-information">
@@ -22,6 +22,7 @@ export default function PrivacyPolicyPage() {
         <ul className="list-disc space-y-2 pl-5">
           <li><strong>Account information:</strong> when you register or sign in, Supabase Auth handles your account identifier, email address and authentication session. Email/password credentials are handled by Supabase Auth.</li>
           <li><strong>Google account information:</strong> if you choose Google sign-in, Google and Supabase Auth provide basic profile information, such as your Google account identifier, name, email address and profile picture if supplied. RepVisual uses this information to establish your account and associate it with your private training records. RepVisual does not request access to Gmail, Google Drive, Google Calendar or Google Contacts.</li>
+          <li><strong>Profile and sharing:</strong> your unique username, uploaded profile photo, and the session names and exercise lists you choose to share. Photo uploads are stored privately in Supabase. Recipients see your username and shared sessions; your personal notes, history and weekly schedule are excluded.</li>
           <li><strong>Training records:</strong> workouts, saved exercises, favourites, exercise notes, weekly schedules, completion ticks, progress and workout history that you enter or generate through the app.</li>
           <li><strong>Technical information:</strong> hosting and authentication providers may process IP addresses, request timestamps, browser information and diagnostic logs to deliver and protect the service.</li>
         </ul>
@@ -34,17 +35,21 @@ export default function PrivacyPolicyPage() {
         <h2 id="privacy-storage" className="text-xl font-semibold text-white">Browser storage and cloud sync</h2>
         <p>Sign-in is required to use the exercise browser and training features. When account sync is available, training records are saved to Supabase under your account. The app also retains a device cache so changes can be kept while a connection is unavailable. Records saved before sign-in became required can remain in legacy browser storage until imported or removed.</p>
         <p>The first account you sign in to on a browser can import that browser’s existing training records. The original browser copy is retained as a migration backup. Later accounts on that browser use separate caches. Signing out does not erase device caches or the migration backup; clear the site’s browser data to remove those local copies.</p>
-        <p>Authentication uses stored session credentials so you can remain signed in. Timer state and music playback are device-local. Third-party embeds may use their own cookies or storage.</p>
+        <p>Authentication uses stored session credentials so you can remain signed in. Timer state is device-local. Third-party embeds may use their own cookies or storage.</p>
       </section>
       <section className="space-y-3" aria-labelledby="privacy-providers">
         <h2 id="privacy-providers" className="text-xl font-semibold text-white">Service providers and external content</h2>
         <p>Vercel hosts the website, Supabase provides authentication and account data storage, and Google processes Google sign-in. Requests to these services are subject to their privacy practices. Data may be processed in the regions used by these providers.</p>
-        <p>Exercise images, YouTube videos and optional music players, including EchoPlay, are served by external providers. Loading or interacting with their content can send technical information to those providers. Their privacy policies apply to that content. Training records are not intentionally sent to the video or music players as part of playback.</p>
+        <p>Exercise images and YouTube videos are served by external providers. Loading or interacting with their content can send technical information to those providers. Their privacy policies apply to that content. Training records are not intentionally sent to the video players as part of playback.</p>
         <p>Shared custom exercises are a public catalog feature. Authorized publishing can make an exercise’s name, linked video and muscle targets publicly readable. Personal notes and workout history are separate from those public catalog records.</p>
+      </section>
+      <section className="space-y-3" aria-labelledby="privacy-sharing">
+        <h2 id="privacy-sharing" className="text-xl font-semibold text-white">Workout sharing</h2>
+        <p>Only users with a username can send or receive workouts. A recipient can save an independent copy of a shared session in their own training library. Later edits or deletion of your original session do not change their copy. Usernames are checked for availability during registration. Profile photos are accessible to their owner through temporary authenticated links.</p>
       </section>
       <section className="space-y-3" aria-labelledby="privacy-control">
         <h2 id="privacy-control" className="text-xl font-semibold text-white">Your choices, retention and deletion</h2>
-        <p>You can read this policy without signing in. Once signed in, you can edit or remove saved items through the app and export your current training records from the Account page. Removing a saved workout does not automatically remove previously recorded workout history. Account records are retained to provide your saved library unless removed through available controls or through a deletion request.</p>
+        <p>You can read this policy without signing in. Once signed in, you can edit or remove saved items through the app. Removing a saved workout does not automatically remove previously recorded workout history. Account records are retained to provide your saved library unless removed through available controls or through a deletion request.</p>
         <p>To request access, correction or deletion of your account and cloud training records, contact the app developer as described below. Account deletion is not currently offered as a self-service button. Device backups must also be removed by clearing the site’s browser data. Service providers may retain operational backups and logs according to their own retention practices.</p>
         <p>You can revoke Google access through your <a href="https://myaccount.google.com/connections" className="text-accent underline">Google Account connections settings</a>. Revoking Google access does not by itself delete training records already saved to your RepVisual account.</p>
       </section>

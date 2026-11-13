@@ -15,7 +15,7 @@ Exercises come from the bundled catalog and manually created custom records. Mis
 - **Double-tap navigation:** double-click or double-tap a muscle or its label to focus the first matching exercise in the current session, without opening its detail page. If there is no session match, browse that exact target instead.
 - **Difficulty-ordered target browsing:** beginner, intermediate, then advanced; unrated/custom exercises follow. Dataset `expert` records display as advanced.
 - **Custom exercises:** create and edit YouTube-linked exercises with specific target metadata. Supabase supports shared storage and admin-only publishing.
-- **Timers and music:** persistent stopwatch/rest timer and an EchoPlay player that stays mounted during navigation.
+- **Timers:** persistent stopwatch and rest timer across navigation.
 
 ## Quick start
 
@@ -31,7 +31,7 @@ Open [localhost:3000](http://localhost:3000). Visitors see sign-in first; signed
 
 On Windows PowerShell, use `npm.cmd` instead of `npm` if script execution policy blocks `npm.ps1`.
 
-Copy [.env.example](.env.example) to `.env.local`, configure the public Supabase URL and publishable key for required sign-in, and restart the server. See Supabase setup below for account storage and Google login. YouTube and music integration keys remain optional.
+Copy [.env.example](.env.example) to `.env.local`, configure the public Supabase URL and publishable key for required sign-in, and restart the server. See Supabase setup below for account storage and Google login. The YouTube API key remains optional.
 
 ## Using anatomy navigation
 
@@ -74,7 +74,7 @@ Keep server secrets in `.env.local` or deployment environment settings. Do not c
 
 #### Personal accounts and Google sign-in
 
-Open `/account` (the **Account** link in the header) for email sign-in/registration, Google sign-in, sync status/retry and JSON backup export. Supabase Auth issues the JWT and manages session refresh; personal training reads/writes use that user's JWT under RLS.
+Sign in or register from `/`. Open **Profile** for photo uploads, username setup, received sessions and logout; `/account` remains the authentication callback. Supabase Auth issues the JWT and manages session refresh; personal training reads/writes use that user's JWT under RLS.
 
 1. Run [personal-training.sql](personal-training.sql) in the Supabase SQL editor after the existing migrations. It creates the private `personal_training` table and revision-checked save function. This repository change does not apply the script to the live database automatically.
 2. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. These existing public variables are sufficient for personal sync; the server secret is only needed for admin custom-exercise publishing.
@@ -88,7 +88,7 @@ Sign in from the **same browser and origin** holding the existing data. The firs
 
 Run `node auth-guard.test.cjs` for the middleware boundary tests, or `node auth-guard.test.cjs --browser` to start an isolated local app/auth fixture and exercise direct-link restrictions, API rejection, public legal content, email/Google login, sync and logout. Existing mocked signed-in browser tests need this fixture because browser-only mocks cannot intercept server-side token verification.
 
-Changes save to a per-account device cache and sync after a short debounce, on reconnect/focus and every 30 seconds. Failed sync retains the cache. Concurrent writes use revision checks and a three-way merge; conflicting note/schedule text retains both versions. Timer and music playback remain device-local.
+Changes save to a per-account device cache and sync after a short debounce, on reconnect/focus and every 30 seconds. Failed sync retains the cache. Concurrent writes use revision checks and a three-way merge; conflicting note/schedule text retains both versions. Timer state remains device-local.
 
 Run `node training-sync.test.cjs` for migration/merge checks, or `node training-sync.test.cjs --browser` against the running app for mocked Auth/database browser checks. Set `TEST_BASE_URL` to change its default `http://localhost:3001`. Mocks do not verify live RLS policies or actual Google account authorization.
 
@@ -117,11 +117,11 @@ In the app, **Create exercise** accepts a name, YouTube link, and specific targe
 | Bundled exercise catalog | `data/exercises.json`. |
 | Custom exercise metadata | Supabase when configured, merged with bundled `data/custom/` records. Development without Supabase can save local JSON; production publishing requires Supabase. |
 | Workouts, schedule, favourites, progress, history and notes | Private Supabase training snapshot plus per-account browser cache; legacy browser records are retained for migration. |
-| Timer and music playback | Device-local runtime/storage state. |
+| Timer state | Device-local runtime/storage state. |
 | Resolved demonstration videos | `data/videos/`, with temporary runtime caching on read-only hosts. |
 | Anatomy model and previews | Self-hosted under `public/models/anatomy/`. |
 
-Exercise photos load from the free-exercise-db CDN. EchoPlay and embedded YouTube playback depend on their external services. Music does not require Spotify credentials; `/spotify` redirects to `/music` for compatibility.
+Exercise photos load from the free-exercise-db CDN. Embedded YouTube playback depends on external services.
 
 ## Development commands
 
@@ -154,11 +154,10 @@ Start the app, then run:
 npm run typecheck
 node scripts/test-anatomy-performance.cjs
 node scripts/test-anatomy-targets.cjs
-node tests/music-preservation.cjs
 node tests/supabase-storage.cjs
 ```
 
-The anatomy checks cover deferred model loading, one reused renderer, all muscle groups, mobile resolution, keyboard/focus behavior, unsupported WebGL, session jumps, exact-target browsing, and difficulty order. Music preservation checks protect browser-local workouts, history, notes, and timer state.
+The anatomy checks cover deferred model loading, one reused renderer, all muscle groups, mobile resolution, keyboard/focus behavior, unsupported WebGL, session jumps, exact-target browsing, and difficulty order.
 
 Browser checks use `playwright-core` and an installed Chrome browser. The anatomy scripts accept `CHROME_PATH`, `TEST_BASE_URL`, and `ANATOMY_ARTIFACTS`; default reports are written to `../tmp/anatomy-performance/` and `../tmp/anatomy-targets/`. Their fixtures use isolated browser storage and do not publish exercise records.
 
@@ -168,7 +167,7 @@ Use the current scripts above for anatomy validation. The older `tests/muscle-gu
 
 ```text
 src/app/                         Routes, API handlers, layout, and styles
-src/components/                  Exercise cards, movement demos, training UI, timers, and music
+src/components/                  Exercise cards, movement demos, training UI, timers
 src/components/AnatomyProvider.tsx   Shared lazy-viewer state
 src/components/AnatomyExplorer.tsx   Modal, session jumps, and target navigation
 src/components/MuscleBody3D.tsx      Three.js rendering and pointer interaction
@@ -180,7 +179,7 @@ data/                            Bundled exercises, custom records, and caches
 tests/                           Other browser and storage checks
 ```
 
-The retired hero, monthly calendar component, Spotify provider, and MakeHuman model pipeline have been removed. Active training views use `WorkoutHeatmap`, `MusicProvider`, and the shared Z-Anatomy viewer.
+The retired hero, monthly calendar component, Spotify provider, and MakeHuman model pipeline have been removed. Active training views use `WorkoutHeatmap` and the shared Z-Anatomy viewer.
 
 For detailed architecture and implementation progress, see [codebase.md](codebase.md).
 
@@ -200,3 +199,11 @@ Browser-local training features do not require a database. Use Supabase for shar
 - The anatomical asset has not been independently reviewed by an anatomy specialist. Highlighting represents training regions, not measured muscle activation.
 
 Built with Next.js, React, TypeScript, Tailwind CSS, Framer Motion, Three.js, Fuse.js, and Supabase.
+
+### Profiles and sharing setup
+
+After the existing training SQL, run [profile-sharing.sql](profile-sharing.sql) in the Supabase SQL Editor. It creates private profiles, unique usernames, recipient-only workout snapshots, sharing functions and the private profile-photo bucket. No additional environment keys are required. This migration must be applied before new username-based signup and sharing can work.
+
+Profile contains photo upload (JPG/PNG/WebP up to 2 MB), username setup for existing/Google users, received sessions and logout. Email signup asks for a unique username. From My Training, share an individual session or all sessions to another username; recipients can add independent copies directly to their own sessions.
+
+Validation: `node workout-sharing.test.cjs` and `node profile-sharing.browser.cjs` (isolated local fixture, not production Supabase).

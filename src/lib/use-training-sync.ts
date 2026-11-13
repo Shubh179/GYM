@@ -117,7 +117,7 @@ export function useTrainingSync(state: LibraryState, setState: Dispatch<SetState
   useEffect(() => {
     if (!hydrated || blocked.current) return;
     try { persistLocal(state); }
-    catch { setStatus("error"); setError("Could not save the device backup. Keep this page open and export your data from Account."); }
+    catch { setStatus("error"); setError("Could not save the device backup. Keep this page open and retry when device storage is available."); }
     if (!uid) return;
     if (!sameTraining(state, base.current)) setStatus("syncing");
     const timer = window.setTimeout(() => void syncNow(), 700);

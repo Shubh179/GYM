@@ -21,6 +21,9 @@ function unavailable() {
 }
 
 export async function middleware(request: NextRequest) {
+  if (["/music", "/spotify", "/api/music-test"].some(path => request.nextUrl.pathname === path || request.nextUrl.pathname.startsWith(`${path}/`))) {
+    return new NextResponse(null, { status: 404 });
+  }
   if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
   const authorization = request.headers.get("authorization");
   const token = authorization?.startsWith("Bearer ")

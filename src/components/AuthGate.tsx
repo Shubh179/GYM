@@ -4,9 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "./AuthProvider";
+import { useProfile } from "./ProfileProvider";
 import { isPublicPath } from "@/lib/auth-cookie";
 import { TimerProvider } from "@/lib/timer";
-import { MusicProvider } from "./MusicProvider";
 import AnatomyProvider from "./AnatomyProvider";
 import Navbar from "./Navbar";
 import FloatingTimer from "./FloatingTimer";
@@ -25,13 +25,19 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const publicPage = isPublicPath(pathname);
+  const { profile, loading: profileLoading, error: profileError } = useProfile();
+  const needsUsername = !!user && !profileLoading && !profileError && !profile?.username;
+  useEffect(() => {
+    if (needsUsername && !["/profile", "/privacy-policy"].includes(pathname)) router.replace("/profile");
+  }, [needsUsername, pathname, router]);
   useEffect(() => {
     if (!loading && !user && !publicPage) router.replace("/");
   }, [loading, user, publicPage, router]);
   if ((loading && pathname !== "/privacy-policy") || (!user && !publicPage)) {
     return <main className="page-shell py-12 text-white/60" role="status">{loading ? "Checking your sign-in..." : "Returning to sign-in..."}</main>;
   }
-  // No app navigation, timer, music iframe or anatomy renderer for visitors.
+  if (needsUsername && !["/profile", "/privacy-policy"].includes(pathname)) return <main className="page-shell py-12 text-white/60" role="status">Choose your username on Profile to continue...</main>;
+  // No app navigation, timer or anatomy renderer for visitors.
   // Legal information is server-rendered even before auth initializes.
   if (!user && pathname !== "/privacy-policy") return <main>{children}</main>;
   if (!user || pathname === "/privacy-policy") return <>
@@ -41,7 +47,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     </header>
     <main>{children}</main><Footer />
   </>;
-  return <TimerProvider><MusicProvider><AnatomyProvider>
+  return <TimerProvider><AnatomyProvider>
     <Navbar /><main>{children}</main><FloatingTimer /><Footer />
-  </AnatomyProvider></MusicProvider></TimerProvider>;
+  </AnatomyProvider></TimerProvider>;
 }

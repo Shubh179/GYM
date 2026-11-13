@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import type { SearchResult } from "@/lib/types";
 import { useLibrary } from "@/lib/library";
 import { exerciseTargets, targetLabel } from "@/lib/muscle-targets";
 
-export default function ExerciseCard({
+function ExerciseCard({
   result,
-  index = 0,
 }: {
   result: SearchResult;
   index?: number;
@@ -33,15 +31,14 @@ export default function ExerciseCard({
 
 
   return (
-    <motion.div
+    <div
       data-exercise-card
       className="h-full min-w-0"
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: Math.min(index * 0.03, 0.3) }}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "auto 240px" }}
     >
       <Link
         href={`/exercise/${result.slug}`}
+        prefetch={false}
         className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-ink-850 transition hover:border-accent/50 hover:shadow-none"
       >
         <div data-exercise-cover className="relative aspect-video w-full shrink-0 overflow-hidden bg-black">
@@ -52,6 +49,7 @@ export default function ExerciseCard({
               onError={() => setFailedCover(cover)}
               alt={result.name}
               loading="lazy"
+              decoding="async"
               className="absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.025]"
             />
           ) : (
@@ -60,13 +58,13 @@ export default function ExerciseCard({
             </div>
           )}
           <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
-            <span className="rounded-md border border-white/10 bg-ink-950/80 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-white/80 backdrop-blur">
+            <span className="rounded-md border border-white/10 bg-ink-950/80 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-white/80">
               {result.level === "expert" ? "advanced" : result.level}
             </span>
             {noteSaved && (
               <span
                 title="Personal note saved"
-                className="flex items-center gap-1 rounded-full border border-white/20 bg-ink-950/90 px-2 py-1 text-[10px] font-semibold text-white backdrop-blur"
+                className="flex items-center gap-1 rounded-full border border-white/20 bg-ink-950/90 px-2 py-1 text-[10px] font-semibold text-white"
               >
                 <svg
                   className="h-2.5 w-2.5"
@@ -91,7 +89,7 @@ export default function ExerciseCard({
               e.stopPropagation();
               toggleFavourite({ ...result, thumbUrl: cover });
             }}
-            className={`absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur transition ${
+            className={`absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full border transition ${
               faved
                 ? "border-white/30 bg-ink-950/90 text-white"
                 : "border-white/10 bg-ink-950/70 text-white/60 hover:text-white"
@@ -118,6 +116,8 @@ export default function ExerciseCard({
           </p>
         </div>
       </Link>
-    </motion.div>
+    </div>
   );
 }
+
+export default memo(ExerciseCard);

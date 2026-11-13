@@ -1,0 +1,45 @@
+const fs = require('node:fs');
+const ts = require('typescript');
+const assert = require('node:assert/strict');
+const moduleFor = file => { const m = { exports: {} }; new Function('module', 'exports', ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText)(m, m.exports); return m.exports; };
+const { normalizeUsername, usernameError, shareSnapshot, parseSharedSessions, importSharedSessions } = moduleFor('src/lib/workout-sharing.ts');
+const exercise = { slug: 'bench-press', name: 'Bench press', level: 'beginner', category: 'strength', equipment: 'barbell', primaryMuscles: ['chest'], targetAreas: ['middle-chest'], thumbUrl: null, notes: 'PRIVATE' };
+const workouts = [{ id: 'private-session-id', name: 'Chest', exercises: [exercise], notes: 'PRIVATE' }, { id: 'legs', name: 'Legs', exercises: [{ ...exercise, slug: 'squat', name: 'Squat' }] }];
+assert.equal(normalizeUsername(' Alex_Fit '), 'alex_fit');
+for (const name of ['abc', 'ALEX_Fit', '123', 'a'.repeat(24)]) assert.equal(usernameError(name), null);
+for (const name of ['ab', 'a'.repeat(25), 'a b', '<script>', '@alex', 'alex-fit']) assert.ok(usernameError(name));
+const snapshot = shareSnapshot(workouts);
+assert.equal(JSON.stringify(snapshot).includes('PRIVATE'), false);
+assert.equal(JSON.stringify(snapshot).includes('private-session-id'), false);
+assert.deepEqual(Object.keys(snapshot[0]), ['name', 'exercises']);
+exercise.primaryMuscles.push('triceps'); assert.deepEqual(snapshot[0].exercises[0].primaryMuscles, ['chest']);
+for (const invalid of [[], Array(51).fill(snapshot[0]), [{ name: 'Empty', exercises: [] }], [{ ...snapshot[0], exercises: [{ ...snapshot[0].exercises[0], thumbUrl: 'javascript:alert(1)' }] }], [{ ...snapshot[0], exercises: [{ ...snapshot[0].exercises[0], slug: '../../account' }] }]]) assert.throws(() => parseSharedSessions(invalid));
+const state = { workouts: [{ id: 'existing', name: 'Existing', exercises: [] }], notes: { secret: 'PRIVATE' }, progress: { existing: ['bench'] }, workoutHistory: { today: ['record'] }, weeklySchedule: 'PRIVATE' };
+const received = importSharedSessions(state, 'share-123', snapshot);
+assert.equal(received.workouts.length, 3); assert.deepEqual(received.workouts[0], state.workouts[0]);
+assert.strictEqual(received.notes, state.notes); assert.strictEqual(received.workoutHistory, state.workoutHistory); assert.strictEqual(received.progress, state.progress);
+assert.equal(received.workouts[1].id, 'shared-share-123-0');
+assert.strictEqual(importSharedSessions(received, 'share-123', snapshot), received, 'Repeated acceptance must not duplicate sessions');
+received.workouts[1].name = 'My own chest'; assert.equal(snapshot[0].name, 'Chest');
+const partial = { ...received, workouts: received.workouts.slice(0, 2) };
+assert.equal(importSharedSessions(partial, 'share-123', snapshot).workouts.length, 3);
+assert.throws(() => importSharedSessions(state, '../../bad', snapshot));
+console.log('PASS usernames, snapshot privacy, limits, invalid payload rejection, independent copies, idempotent and partial imports');
+
+(async () => {
+  let current = { user: { id: 'alice' }, access_token: 'alice-token' };
+  const m = { exports: {} };
+  const source = ts.transpileModule(fs.readFileSync('src/lib/sharing-client.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
+  new Function('require', 'module', 'exports', source)(name => {
+    if (name === '@supabase/supabase-js') return { createClient: (_url, _key, options) => options };
+    if (name === './supabase-browser') return { browserSupabase: () => ({ auth: { getSession: async () => ({ data: { session: current }, error: null }) } }) };
+    throw Error(name);
+  }, m, m.exports);
+  const pinned = await m.exports.sharingClient('alice');
+  current = { user: { id: 'bob' }, access_token: 'bob-token' };
+  assert.equal(await pinned.accessToken(), 'alice-token');
+  await assert.rejects(() => m.exports.sharingClient('alice'), /account changed/);
+  current = null;
+  await assert.rejects(() => m.exports.sharingClient('alice'), /account changed/);
+  console.log('PASS sharing requests pin the initiating JWT and reject account switches/sign-out');
+})().catch(error => { console.error(error); process.exitCode = 1; });

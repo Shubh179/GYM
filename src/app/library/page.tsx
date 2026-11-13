@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import ShareWorkout from "@/components/ShareWorkout";
 import ExerciseCard from "@/components/ExerciseCard";
 import WeeklySchedule from "@/components/SyncedWeeklySchedule";
 import WorkoutHeatmap from "@/components/WorkoutHeatmap";
@@ -136,6 +137,7 @@ function WorkoutBlock({
         </div>
 
         <div className={`${collapsed ? "hidden" : "flex"} flex-wrap items-center gap-2 text-sm`}>
+          <ShareWorkout workouts={[workout]} />
           {/* Direct Add Exercise Toggle Button */}
           <button
             onClick={() => setShowAddExercise((v) => !v)}
@@ -509,6 +511,8 @@ export default function LibraryPage() {
       <div className="mt-6 sm:mt-8">
         <WeeklySchedule />
       </div>
+
+      <div className="mt-6"><ShareWorkout workouts={workouts} label="Share all sessions" /></div>
 
       {/* Workout sessions */}
       <section className="mt-6 sm:mt-8">

@@ -8,6 +8,8 @@ import ExerciseCard from "@/components/ExerciseCard";
 import type { SearchResult } from "@/lib/types";
 import { exerciseTargets, sortByDifficulty, targetLabel, MUSCLE_TARGETS } from "@/lib/muscle-targets";
 
+const BROWSE_PAGE_SIZE = 24;
+
 const difficultyGroups = [
   { id: "beginner", label: "Beginner" },
   { id: "intermediate", label: "Intermediate" },
@@ -31,12 +33,14 @@ function Results() {
   const [error, setError] = useState("");
   const [relatedMuscle, setRelatedMuscle] = useState("");
   const [expanded, setExpanded] = useState<string[]>([]);
+  const [pages, setPages] = useState<Record<string, number>>({});
 
   useEffect(() => {
     setLoading(true);
     setError("");
     setRelatedMuscle("");
     setExpanded([]);
+    setPages({});
     const controller = new AbortController();
     const url = target
       ? `/api/exercises?target=${encodeURIComponent(target)}`
@@ -129,14 +133,22 @@ function Results() {
           const exercises = results.filter(item => difficulty(item.level) === group.id);
           if (!exercises.length) return null;
           const isExpanded = expanded.includes(group.id);
+          const page = Math.min(pages[group.id] ?? 0, Math.max(0, Math.ceil(exercises.length / BROWSE_PAGE_SIZE) - 1));
+          const start = page * BROWSE_PAGE_SIZE;
+          const visible = isExpanded ? exercises.slice(start, start + BROWSE_PAGE_SIZE) : exercises.slice(0, 3);
           return <section key={group.id} aria-label={`${group.label} exercises`}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="text-lg font-semibold">{group.label} <span className="text-sm text-white/50">({exercises.length})</span></h3>
               {exercises.length > 3 && <button type="button" aria-expanded={isExpanded} onClick={() => setExpanded(current => isExpanded ? current.filter(id => id !== group.id) : [...current, group.id])} className="min-h-11 rounded-lg border border-white/20 px-3 text-sm">{isExpanded ? "Show fewer" : `View all ${group.label.toLowerCase()}`}</button>}
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {(isExpanded ? exercises : exercises.slice(0, 3)).map((result, index) => <ExerciseCard key={result.slug} result={result} index={index} />)}
+              {visible.map((result, index) => <ExerciseCard key={result.slug} result={result} index={index} />)}
             </div>
+            {isExpanded && exercises.length > BROWSE_PAGE_SIZE && <nav aria-label={`${group.label} exercise pages`} className="mt-4 flex flex-wrap items-center gap-3">
+              <button type="button" disabled={page === 0} onClick={() => setPages(current => ({ ...current, [group.id]: page - 1 }))} className="min-h-11 rounded-lg border border-white/20 px-4 text-sm disabled:opacity-40">Previous</button>
+              <span role="status" className="text-sm text-white/60">{start + 1} - {Math.min(start + BROWSE_PAGE_SIZE, exercises.length)} of {exercises.length}</span>
+              <button type="button" disabled={start + BROWSE_PAGE_SIZE >= exercises.length} onClick={() => setPages(current => ({ ...current, [group.id]: page + 1 }))} className="min-h-11 rounded-lg border border-white/20 px-4 text-sm disabled:opacity-40">Next</button>
+            </nav>}
           </section>;
         })}</div>
       ) : (

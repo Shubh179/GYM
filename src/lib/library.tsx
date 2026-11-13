@@ -16,6 +16,7 @@ import type { SearchResult } from "./types";
 import { usePathname } from "next/navigation";
 import { primaryMuscleOverlapWarning } from "./muscle-overlap";
 import { toggleWorkoutExercise, undoRecordedSession } from "./workout-completion";
+import { importSharedSessions } from "./workout-sharing";
 import { useAuth } from "@/components/AuthProvider";
 import { emptyTraining } from "./training-merge";
 import { useTrainingSync, type SyncStatus } from "./use-training-sync";
@@ -70,6 +71,7 @@ interface LibraryContextValue extends LibraryState {
   toggleFavourite: (ex: SavedExercise) => void;
   // Workouts
   createWorkout: (name: string) => Workout | null;
+  addReceivedWorkouts: (shareId: string, sessions: unknown) => void;
   renameWorkout: (id: string, name: string) => void;
   deleteWorkout: (id: string) => void;
   addToWorkout: (id: string, ex: SavedExercise) => void;
@@ -123,6 +125,16 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<LibraryState>(EMPTY);
   const { hydrated, syncStatus, syncError, syncNow, persistLocal } = useTrainingSync(state, setState);
   const metadataGeneration = useRef(0);
+  const importState = useRef(state);
+  importState.current = state;
+  const addReceivedWorkouts = useCallback((shareId: string, sessions: unknown) => {
+    if (!hydrated) throw Error("Your sessions are still loading.");
+    const next = importSharedSessions(importState.current, shareId, sessions);
+    // Persist first: a full/blocked device cache must not falsely report an import.
+    persistLocal(next);
+    importState.current = next;
+    setState(next);
+  }, [hydrated, persistLocal]);
   const setWeeklySchedule = useCallback((weeklySchedule: string) => setState(previous => ({ ...previous, weeklySchedule })), []);
 
   const refreshSavedExercises = useCallback((exercises: SavedExercise[]) => {
@@ -415,6 +427,7 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
       isFavourite,
       toggleFavourite,
       createWorkout,
+      addReceivedWorkouts,
       renameWorkout,
       deleteWorkout,
       addToWorkout,
@@ -442,6 +455,7 @@ function LibraryStore({ children }: { children: React.ReactNode }) {
       isFavourite,
       toggleFavourite,
       createWorkout,
+      addReceivedWorkouts,
       renameWorkout,
       deleteWorkout,
       addToWorkout,

@@ -8,7 +8,7 @@ See [README.md](README.md) for setup, environment variables, deployment and lice
 
 ## Architecture
 
-The root layout mounts `AuthProvider`, `LibraryProvider`, `TimerProvider`, `MusicProvider` and `AnatomyProvider`. Supabase Auth supplies JWT sessions; the library remounts on account changes to isolate training data. The remaining providers keep timers, EchoPlay and anatomy available across route navigation.
+The root layout mounts `AuthProvider`, `ProfileProvider`, `LibraryProvider`, `TimerProvider` and `AnatomyProvider`. Supabase Auth supplies JWT sessions; the library remounts on account changes to isolate training data. The remaining providers keep timers and anatomy available across route navigation.
 
 Server routes read the bundled catalog and custom metadata. Supabase supplies shared custom exercises, admin authorization and private per-user training snapshots. Personal sync uses the public client key plus the signed-in user's JWT and RLS, never the server secret.
 
@@ -22,9 +22,8 @@ Server routes read the bundled catalog and custom metadata. Supabase supplies sh
 | `/exercise/[slug]` | Dataset/custom exercise details, photo demonstrations where available, YouTube videos, instructions, notes and anatomy. Unknown slugs use the segment's `not-found.tsx`. |
 | `/favourites` | Browser-local favourite exercises. |
 | `/timer` | Full stopwatch and rest-timer interface. |
-| `/account` | Google/email sign-in, email registration, private training sync status/retry, sign-out and JSON backup export. |
-| `/music` | EchoPlay controls, plus the separate in-progress audio-test experiment. |
-| `/spotify` | Compatibility redirect to `/music`. |
+| `/profile` | Protected minimal profile with photo upload, unique username, received sessions and logout. |
+| `/account` | Public sign-in/OAuth callback retained for existing Supabase redirect configuration; signed-in visits forward to `/profile` unless completing sign-in to `/library`. |
 
 ## Exercise catalog and APIs
 
@@ -42,7 +41,6 @@ Server routes read the bundled catalog and custom metadata. Supabase supplies sh
 | `GET /api/exercise/[slug]` | Return an existing exercise or 404; no generated-record/cache lookup. |
 | `PATCH /api/exercise/[slug]` | Update a custom exercise while retaining its slug and ID. Built-in records cannot be edited. |
 | `/api/exercise-access` | Report sign-in/publishing access for custom exercise controls. |
-| `/api/music-test` | Separate in-progress one-song audio-provider experiment. |
 
 There is no exercise or video generation pipeline. The former generation routes, SDKs, pose renderer, loading screens, generated-record types, disk cache and API-key settings have been removed.
 
@@ -52,7 +50,7 @@ There is no exercise or video generation pipeline. The former generation routes,
 
 - App access requires sign-in. Records sync through `personal_training`, whose primary key is `auth.users.id`. `personal-training.sql` at the repository root creates the table, owner-only RLS policies and the revision-checked `save_personal_training` RPC. It must be applied in the Supabase SQL editor; it has not been applied automatically.
 - The first account on a browser claims legacy `repvisual:library:v1` and `repvisual:weekly-schedule:v1` data. Both original keys are retained. Subsequent accounts cannot import that claimed data. Per-account caches use `repvisual:library:user:<id>:v2`; signed-out use after a claim uses a separate guest cache.
-- Three-way merging combines independent changes by workout/history ID and exercise slug, respects non-conflicting deletions, and retains both versions of conflicting note/schedule text. Revision conflicts reload/merge/retry rather than replacing newer cloud data. Offline/failed sync keeps the cache and displays an error/retry action on Account.
+- Three-way merging combines independent changes by workout/history ID and exercise slug, respects non-conflicting deletions, and retains both versions of conflicting note/schedule text. Revision conflicts reload/merge/retry rather than replacing newer cloud data. Offline/failed sync keeps the cache and retries on reconnect/focus; the minimal Profile does not expose sync controls.
 - A sync batch pins its JWT to the initiating user so an account switch cannot write old account data to the new account. History remains a snapshot. Timer state remains device-local.
 - Workout completion records the exercises actually marked done; partial sessions do not automatically mark every exercise complete.
 - Undoing a recorded session restores the prior exercise selection for editing.
@@ -65,11 +63,11 @@ There is no exercise or video generation pipeline. The former generation routes,
 
 For Google login enable the Google provider in Supabase Authentication, configure its Google OAuth client ID/secret, use the Supabase callback URL as the Google authorized redirect URI, and allow each app origin's `/account` URL in Supabase Auth redirect settings. The existing browser Supabase client manages the OAuth callback, JWT persistence and automatic refresh. Email confirmation returns to `/account` too.
 
-The homepage shows authentication first. Successful email sign-in goes to `/library`; Google sign-in records a tab-local return destination and keeps the existing `/account` callback URL before forwarding to `/library`. Signed-in users can still open `/account` to manage sync and backups. Only `/`, `/account`, and `/privacy-policy` are public app routes. Signed-out navigation and data export are hidden, and logout returns to `/`.
+The homepage shows authentication first. Successful email sign-in goes to `/library`; Google sign-in records a tab-local return destination and keeps the existing `/account` callback URL before forwarding to `/library`. Signed-in users open `/profile` for photo uploads, username setup, received sessions and logout; `/account` forwards there. Only `/`, `/account`, and `/privacy-policy` are public app routes. Signed-out navigation and data export are hidden, and logout returns to `/`.
 
 The installed Supabase browser client already defaults to persistent sessions and automatic access-token refresh. `AuthProvider` mirrors token rotations into the access-token cookie. On a server-rejected token at the login boundary, it tries `refreshSession()` before requiring credentials, rather than signing out and discarding the stored refresh token. Temporary refresh failures retain the SDK session for retry. `node session-refresh.test.cjs` checks recovery and subsequent token/sign-in events.
 
-`src/middleware.ts` checks protected page, RSC, API and model requests with Supabase `auth.getUser(token)`, using a Bearer header or a short-lived access-token cookie maintained by `AuthProvider`. It redirects unauthenticated pages to login, returns 401 for APIs, rejects forged/invalid tokens and returns 503 if verification is unavailable. It never trusts cookie presence or client state as authentication. Required Next.js assets and discovery files are excluded. `AuthGate.tsx` unmounts app navigation/timer/music/anatomy for signed-out users and prevents cached-route UI from remaining accessible. The privacy policy remains server-rendered and public.
+`src/middleware.ts` checks protected page, RSC, API and model requests with Supabase `auth.getUser(token)`, using a Bearer header or a short-lived access-token cookie maintained by `AuthProvider`. It redirects unauthenticated pages to login, returns 401 for APIs, rejects forged/invalid tokens and returns 503 if verification is unavailable. It never trusts cookie presence or client state as authentication. Required Next.js assets and discovery files are excluded. `AuthGate.tsx` unmounts app navigation/timer/anatomy for signed-out users and prevents cached-route UI from remaining accessible. The privacy policy remains server-rendered and public.
 
 `node auth-guard.test.cjs --browser` starts a separate fixture app on port 3012 with a local mock Supabase auth verifier, then exercises guest route/API restrictions and the signed-in migration/sync flows. It does not configure a production bypass or contact the real database.
 
@@ -159,14 +157,12 @@ Apply both migrations in order:
 
 The second migration adds `primary_muscles` and `target_areas` without inventing targets for existing rows. The import script supports `--dry-run`, retains local files and preserves existing slugs.
 
-## Demonstrations, timers and music
+## Demonstrations and timers
 
 - `MovementViewer.tsx` animates real dataset photo pairs with play/pause, speed and scrubbing. Missing pairs show a photo-unavailable state; there is no generated pose fallback.
 - `ExerciseView.tsx` renders dataset/custom details, actions, target labels, anatomy, personal notes, instructions and YouTube demonstrations. Custom exercises use their manually linked YouTube video.
 - `youtube.ts` resolves existing videos through cached IDs, an optional YouTube API key, or keyless resolution. Only video metadata is cached under `data/videos/` or temporary storage on read-only deployments. `youtube-embed.ts` builds embed URLs.
 - `timer.tsx` persists stopwatch/rest-timer state under `repvisual:timer:v1`. `FloatingTimer.tsx` keeps it usable during navigation; provider behavior is shared with `/timer`.
-- `MusicProvider.tsx` owns the persistent EchoPlay iframe and its measured dock height. The floating timer accounts for the player so the docks do not overlap.
-- The separate one-song audio test uses `RAPIDAPI_KEY`; it remains unrelated in-progress work. No music-provider key is needed for normal EchoPlay use.
 
 ## Scripts, build and verification
 
@@ -189,7 +185,6 @@ Run browser checks against a running server:
 
 - `node scripts/test-anatomy-performance.cjs`: deferred loading, renderer reuse, all groups, resolution, draw calls, focus/Escape and no-WebGL fallback.
 - `node scripts/test-anatomy-targets.cjs`: session scoping, mesh/label double-taps, keyboard activation, exact-target filtering and difficulty order.
-- `node tests/music-preservation.cjs`: workout/history/notes/timer preservation across music navigation.
 - `node tests/supabase-storage.cjs`: isolated storage and authorization checks without production writes.
 
 The anatomy scripts support `TEST_BASE_URL`, `CHROME_PATH` and `ANATOMY_ARTIFACTS`. Default artifacts go to `../tmp/anatomy-performance/` and `../tmp/anatomy-targets/`. The target script also supports `TARGET_WIDTHS`. More tests are listed in `tests/README.md`.
@@ -198,7 +193,6 @@ The anatomy scripts support `TEST_BASE_URL`, `CHROME_PATH` and `ANATOMY_ARTIFACT
 
 Removed unused `Hero.tsx`, `MonthlyHeatmap.tsx`, `SpotifyProvider.tsx`, the MakeHuman model pipeline/assets, unused integration helpers/imports, unused viewer state/animation branches, and obsolete anatomy explanation fields. The active source model and required licensing/provenance remain.
 
-Deletion was blocked for the unreferenced `src/lib/spotify.ts` and obsolete `tests/muscle-guide.cjs`. They remain on disk; use the current anatomy scripts instead of the old eager-viewer test.
 
 Feature commits already created locally:
 
@@ -209,3 +203,27 @@ Feature commits already created locally:
 | `57a685e` | Session jumps and sorted target browsing from muscle double taps. |
 
 The subsequent cleanup and catalog-only changes are working-tree progress. The last GitHub push attempt failed because the session could not access GitHub credentials; successful remote synchronization has not been verified.
+
+
+## Music removal
+
+Music navigation and the app-wide player provider have been removed. The floating timer uses a fixed bottom offset and no longer depends on player state. Music-only styles and the RapidAPI example setting have been removed. `/music`, `/spotify` and `/api/music-test` return 404 from middleware. Exercise YouTube demonstrations remain supported.
+
+Filesystem permissions currently prevent deleting the retired music route files, player/test components, Spotify helper and music-preservation test, and prevent updating the affected browser tests. Those files remain on disk pending deletion; the player is no longer mounted by the app.
+
+Browse difficulty groups render at most 24 cards per expanded group page, with Previous/Next controls. Cards disable route prefetching and entrance animations and use asynchronous image decoding.
+
+Profile is the fifth main navigation destination. Logout clears the local Supabase session and access-token cookie before returning to `/`. Existing `/account` OAuth and email callbacks remain compatible. The old signed-in account statistics, sync controls and backup controls are no longer shown.
+
+## Profiles and workout sharing
+
+Run `profile-sharing.sql` in Supabase SQL Editor after `personal-training.sql`. This root-level migration is idempotent and transactional. The user applied it in the live Supabase SQL Editor. Read-only verification confirmed both table schemas, the username RPC, anonymous-access rejection and the private photo bucket with its MIME/2 MB limits. Live signed-in delivery and uploads have not been exercised by this session. The protected migrations directory rejected new files, so the script follows the existing root-level SQL convention.
+
+- `profiles`: per-user lowercase unique usernames and private avatar paths. RLS exposes only the caller's row. `claim_username` assigns a username once; uniqueness is enforced by Postgres, including concurrent claims.
+- Email registration checks availability then includes the username in signup metadata. The auth-user trigger reserves it in the same transaction as account creation. Google sign-ins and legacy users without a username finish onboarding on Profile before continuing to the app.
+- `profile-photos`: private bucket with owner-folder read/upload/delete policies and JPG/PNG/WebP, 2 MB limits. Uploads are cropped to a 512px JPEG in the browser, saved under an unguessable owner path, and displayed using hour-long signed URLs. Replacement removes the prior photo after updating the profile.
+- `workout_shares`: immutable snapshots readable only by their recipient. `send_workout` resolves the recipient's unique username, requires both users to have usernames, forbids self-sharing, validates payloads and caps sends at 30/hour. Definer functions use a fixed empty search path and restricted execute grants. Snapshots whitelist session names and exercise metadata; notes, history, schedule and progress never leave the sender's library.
+- `ShareWorkout.tsx` supplies per-session sharing and Share all sessions on My Training. Empty sessions cannot be shared; batches are limited to 50 sessions/100 exercises each and 1 MB.
+- `UserProfile.tsx` loads 20 received shares at a time, refreshes on focus/every minute, previews exercises and imports independent copies. `sharing-client.ts` pins each request to the initiating user JWT and rejects account switches. Stable IDs based on share ID/session index make repeated imports idempotent. `addReceivedWorkouts` persists the account's local cache before reporting success; existing training sync saves imports across devices. A recipient's edits do not change the sender's workout.
+- `workout-sharing.test.cjs`: validation, snapshot privacy, independent copies, duplicate/partial imports and preservation of unrelated training state.
+- `profile-sharing.browser.cjs`: isolated mocked two-account app checks, signup/legacy username flows, photo upload, one/all session delivery, import persistence, mobile widths and logout. Artifacts are written to `../tmp/profile-sharing/`. This does not verify live Supabase RLS or storage setup.

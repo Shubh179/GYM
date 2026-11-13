@@ -1,7 +1,5 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useMusic } from "./MusicProvider";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,7 +11,6 @@ import {
 
 export default function FloatingTimer() {
   const pathname = usePathname();
-  const { isOpen, playerHeight } = useMusic();
   const {
     hydrated,
     restTimer,
@@ -47,8 +44,7 @@ export default function FloatingTimer() {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-        style={{ "--timer-offset": `${isOpen ? playerHeight + 32 : 20}px` } as CSSProperties}
-        className="floating-workout-timer fixed bottom-[var(--timer-offset)] right-4 z-40 max-w-[calc(100vw-2rem)] sm:bottom-[var(--timer-offset)] sm:right-5 sm:max-w-sm rounded-2xl border border-white/15 bg-ink-900/95 p-3.5 shadow-2xl backdrop-blur-lg sm:p-4"
+        className="floating-workout-timer fixed bottom-5 right-4 z-40 max-w-[calc(100vw-2rem)] sm:bottom-5 sm:right-5 sm:max-w-sm rounded-2xl border border-white/15 bg-ink-900/95 p-3.5 shadow-2xl backdrop-blur-lg sm:p-4"
       >
         {isRestFinished ? (
           /* Finished Rest Alert Banner */

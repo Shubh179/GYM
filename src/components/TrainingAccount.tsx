@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "./AuthProvider";
-import { useLibrary } from "@/lib/library";
 import { browserSupabase } from "@/lib/supabase-browser";
+import { normalizeUsername, usernameError } from "@/lib/workout-sharing";
 
 const SIGNIN_DESTINATION = "repvisual:signin-destination:v1";
 
 export default function TrainingAccount({ redirectWhenSignedIn = false }: { redirectWhenSignedIn?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, configured, error: authError } = useAuth();
-  const library = useLibrary();
+  const [username, setUsername] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +22,6 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const button = "min-h-11 rounded-lg border border-white/20 px-4 py-2 text-sm font-semibold disabled:opacity-50";
   useEffect(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
     const query = new URLSearchParams(window.location.search);
@@ -39,17 +39,24 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
       if (pending) sessionStorage.removeItem(SIGNIN_DESTINATION);
     } catch { /* The homepage redirect also works without session storage. */ }
     if (redirectWhenSignedIn || pending) router.replace("/library");
-  }, [user, redirectWhenSignedIn, router]);
+    else if (pathname === "/account") router.replace("/profile");
+  }, [user, redirectWhenSignedIn, pathname, router]);
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (mode === "signup" && usernameError(username)) { setError(usernameError(username)!); return; }
     if (mode === "signup" && password !== confirmPassword) { setError("Passwords do not match."); return; }
     const client = browserSupabase();
     if (!client) return;
     setBusy(true); setError(""); setMessage("");
     try {
+      if (mode === "signup") {
+        const availability = await client.rpc("username_available", { p_username: normalizeUsername(username) });
+        if (availability.error) throw Error("Could not check your username. Please try again later.");
+        if (!availability.data) throw Error("That username is already taken. Choose another.");
+      }
       try { sessionStorage.setItem(SIGNIN_DESTINATION, "/library"); } catch { /* Direct email redirect remains available. */ }
       const result = mode === "signup"
-        ? await client.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/account` } })
+        ? await client.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/account`, data: { username: normalizeUsername(username) } } })
         : await client.auth.signInWithPassword({ email: email.trim(), password });
       if (result.error) throw result.error;
       setPassword("");
@@ -76,22 +83,6 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
       setError(cause instanceof Error ? cause.message : "Google sign-in failed."); setBusy(false);
     }
   }
-  async function signOut() {
-    setBusy(true); setError("");
-    try {
-      const result = await browserSupabase()?.auth.signOut({ scope: "local" });
-      if (result?.error) throw result.error;
-      router.replace("/");
-    } catch { setError("Could not sign out. Please try again."); }
-    finally { setBusy(false); }
-  }
-  function exportBackup() {
-    const { favourites, workouts, progress, completions, sessionLog, workoutHistory, notes, weeklySchedule } = library;
-    const blob = new Blob([JSON.stringify({ favourites, workouts, progress, completions, sessionLog, workoutHistory, notes, weeklySchedule }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a"); link.href = url; link.download = "repvisual-training-backup.json"; link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
   if (!user) return <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-ink-950 px-5 py-10">
     <div aria-hidden="true" className="pointer-events-none absolute -top-48 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-accent/[0.06] blur-[100px]" />
     <div className="relative w-full max-w-[400px]">
@@ -112,6 +103,10 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
         </button>
         <div className="my-6 flex items-center gap-3" aria-hidden="true"><span className="h-px flex-1 bg-white/10" /><span className="text-xs text-white/50">or</span><span className="h-px flex-1 bg-white/10" /></div>
         <form onSubmit={submit} className="space-y-4">
+          {mode === "signup" && <label className="block text-sm font-medium text-white/75">Username
+            <input required disabled={busy || !configured} minLength={3} maxLength={24} pattern="[a-zA-Z0-9_]{3,24}" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Choose a unique username" value={username} onChange={e => setUsername(e.target.value)} className="mt-2 block h-12 w-full rounded-xl border border-white/10 bg-ink-900 px-3.5 text-base text-white" />
+            <span className="mt-2 block text-xs text-white/45">3-24 letters, numbers or underscores. Used to share workouts.</span>
+          </label>}
           <label className="block text-sm font-medium text-white/75">Email
             <input required disabled={busy || !configured} type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="mt-2 block h-12 w-full rounded-xl border border-white/10 bg-ink-900 px-3.5 text-base text-white outline-none transition focus:border-accent/60 disabled:opacity-40" />
           </label>
@@ -135,18 +130,5 @@ export default function TrainingAccount({ redirectWhenSignedIn = false }: { redi
     </div>
   </div>;
 
-  return <div className="page-shell py-10"><div className="mx-auto max-w-xl space-y-6">
-    <h1 className="page-title">Your account</h1>
-    {(error || authError) && <p role="alert" className="rounded-lg border border-red-400/30 p-4 text-sm text-red-200">{error || authError}</p>}
-    <section className="space-y-4 rounded-xl border border-white/10 bg-ink-850 p-5">
-      <p className="break-all text-sm">{user.email ?? "Your account"}</p>
-      <p role="status" className="text-sm text-white/70">{library.syncStatus === "synced" ? "All changes synced to your account." : library.syncStatus === "syncing" ? "Syncing your training..." : library.syncStatus === "error" ? "Sync needs attention." : "Saved on this device."}</p>
-      {library.syncError && <p role="alert" className="text-sm text-red-200">{library.syncError}</p>}
-      <div className="flex flex-wrap gap-3">
-        <button className={button} disabled={library.syncStatus === "syncing"} onClick={() => void library.syncNow()}>Sync now</button>
-        <button className={button} disabled={busy} onClick={() => void signOut()}>Sign out</button>
-      </div>
-    </section>
-    <div className="flex flex-wrap gap-3"><button className={button} onClick={exportBackup}>Export training backup</button><Link className={`${button} inline-flex items-center`} href="/library">Back to training</Link></div>
-  </div></div>;
+  return <div className="page-shell py-12 text-white/60" role="status">Opening your profile...</div>;
 }
